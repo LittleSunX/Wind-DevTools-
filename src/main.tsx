@@ -15,3 +15,5 @@ import { initAnalytics } from "./analytics";
 initAnalytics();
 
 import "./components/code-image.css";
+
+import "./components/code-editor.css";

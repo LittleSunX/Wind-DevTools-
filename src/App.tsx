@@ -1,3 +1,4 @@
+import CodeEditor from "./components/CodeEditor";
 import CodeImage from "./components/CodeImage";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { categories, tools } from "./catalog";
@@ -59,6 +60,9 @@ export function App({ path = "/tools" }: { path?: string }) {
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [replace, setReplace] = useState(false);
+  const [wrap, setWrap] = useState(true);
+  const codeLanguage =
+    current?.id === "json" || current?.id === "sql" ? current.id : undefined;
   const [options, setOptions] = useState<Options>(defaultOptions);
   const [now, setNow] = useState<number>();
   const searchRef = useRef<HTMLInputElement>(null);
@@ -504,6 +508,16 @@ export function App({ path = "/tools" }: { path?: string }) {
                     onChange={(v) => option("zone", v)}
                   />
                 )}
+                {codeLanguage && (
+                  <label className="wrap-option">
+                    <input
+                      type="checkbox"
+                      checked={wrap}
+                      onChange={(e) => setWrap(e.target.checked)}
+                    />
+                    自动换行
+                  </label>
+                )}
                 <span className="option-hint">
                   {current.id === "jwt"
                     ? "仅解码 · 不验证签名"
@@ -533,9 +547,10 @@ export function App({ path = "/tools" }: { path?: string }) {
               )}
               <div
                 className="editors"
-                onKeyDown={(e) => {
+                onKeyDownCapture={(e) => {
                   if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
                     e.preventDefault();
+                    e.stopPropagation();
                     run();
                   }
                 }}
@@ -563,17 +578,40 @@ export function App({ path = "/tools" }: { path?: string }) {
                       <button onClick={() => setReplace(false)}>取消</button>
                     </div>
                   )}
-                  <textarea
-                    id="tool-input"
-                    spellCheck={false}
-                    value={input}
-                    onChange={(e) => changeInput(e.target.value)}
-                    placeholder={
-                      current.id === "timestamp" && options.direction === "date"
-                        ? "2026-09-14 00:00:00"
-                        : `在这里粘贴${current.name.replace("格式化", "").replace("解析", "")}内容…\n\n也可以点击「加载示例」开始。`
-                    }
-                  />
+                  {codeLanguage ? (
+                    <CodeEditor
+                      id="tool-input"
+                      label="输入"
+                      value={input}
+                      language={codeLanguage}
+                      dialect={options.dialect}
+                      indent={options.indent}
+                      wrap={wrap}
+                      invalid={!!error}
+                      onChange={changeInput}
+                      placeholder="粘贴代码，或点击「加载示例」开始…"
+                    />
+                  ) : (
+                    <textarea
+                      id="tool-input"
+                      aria-invalid={!!error}
+                      aria-describedby={error ? "tool-error" : undefined}
+                      spellCheck={false}
+                      value={input}
+                      onChange={(e) => changeInput(e.target.value)}
+                      placeholder={
+                        current.id === "timestamp" &&
+                        options.direction === "date"
+                          ? "2026-09-14 00:00:00"
+                          : `在这里粘贴${current.name.replace("格式化", "").replace("解析", "")}内容…\n\n也可以点击「加载示例」开始。`
+                      }
+                    />
+                  )}
+                  {error && (
+                    <div id="tool-error" className="error-box" role="alert">
+                      {error}
+                    </div>
+                  )}
                   <div className="action-bar">
                     <button
                       className="primary"
@@ -628,13 +666,26 @@ export function App({ path = "/tools" }: { path?: string }) {
                     </button>
                   </div>
                   <div className="output-wrap">
-                    <textarea
-                      id="tool-output"
-                      aria-label="处理结果"
-                      readOnly
-                      value={output}
-                      spellCheck={false}
-                    />
+                    {codeLanguage ? (
+                      <CodeEditor
+                        id="tool-output"
+                        label="处理结果"
+                        value={output}
+                        language={codeLanguage}
+                        dialect={options.dialect}
+                        indent={options.indent}
+                        wrap={wrap}
+                        readOnly
+                      />
+                    ) : (
+                      <textarea
+                        id="tool-output"
+                        aria-label="处理结果"
+                        readOnly
+                        value={output}
+                        spellCheck={false}
+                      />
+                    )}
                     {!output && (
                       <div className="output-empty">
                         <span>{busy ? "↻" : error ? "!" : "⌁"}</span>
@@ -656,21 +707,32 @@ export function App({ path = "/tools" }: { path?: string }) {
                     )}
                   </div>
                   <div className="editor-footer">
-                    <span>{output ? "处理完成" : "等待处理"}</span>
+                    <span
+                      className={`result-status ${busy ? "is-busy" : error ? "is-error" : output ? "is-done" : ""}`}
+                    >
+                      {busy
+                        ? "正在处理"
+                        : error
+                          ? "输入有误"
+                          : output
+                            ? "处理完成"
+                            : "等待处理"}
+                    </span>
                     <span>浏览器本地计算</span>
                   </div>
                 </section>
               </div>
-              {error && (
-                <div className="error-box" role="alert">
-                  {error}
-                </div>
-              )}
               <div className="notice" role="status">
                 {notice}
               </div>
               <section className="instructions">
                 <h2>使用说明</h2>
+                {codeLanguage && (
+                  <p>
+                    Tab 缩进，Shift + Tab 取消缩进；按 Esc 后再按 Tab
+                    可离开编辑器。Ctrl / ⌘ + F 查找，Ctrl / ⌘ + Z 撤销编辑。
+                  </p>
+                )}
                 <p>{current.hint}</p>
                 <p>
                   {current.id === "cron"
