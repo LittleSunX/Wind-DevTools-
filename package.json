@@ -1,0 +1,37 @@
+{
+  "name": "wind-devtools",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc -b && vite build && tsx scripts/prerender.ts",
+    "preview": "node scripts/preview.mjs",
+    "test": "vitest run",
+    "test:browser": "node scripts/browser-check.mjs",
+    "format": "prettier --write src scripts tests *.json *.ts index.html",
+    "format:check": "prettier --check src scripts tests *.json *.ts index.html",
+    "test:build": "node scripts/build-check.mjs",
+    "test:code-image": "node scripts/code-image-check.mjs"
+  },
+  "dependencies": {
+    "cron-parser": "^5.0.0",
+    "prismjs": "^1.30.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "sql-formatter": "^15.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0",
+    "@types/node": "^22.0.0",
+    "@types/prismjs": "^1.26.6",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.0.0",
+    "prettier": "^3.9.7",
+    "tsx": "^4.0.0",
+    "typescript": "~5.7.0",
+    "vite": "^6.0.0",
+    "vitest": "^3.0.0"
+  }
+}

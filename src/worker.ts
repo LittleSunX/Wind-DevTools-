@@ -1,0 +1,37 @@
+import { checkInput, type Options } from "./utils/shared";
+self.onmessage = async (
+  event: MessageEvent<{ id: string; input: string; options: Options }>,
+) => {
+  const { id, input, options } = event.data;
+  try {
+    checkInput(input);
+    let result: string;
+    switch (id) {
+      case "json":
+        result = (await import("./utils/json")).jsonTool(input, options);
+        break;
+      case "timestamp":
+        result = (await import("./utils/timestamp")).timestampTool(
+          input,
+          options,
+        );
+        break;
+      case "jwt":
+        result = (await import("./utils/jwt")).jwtTool(input);
+        break;
+      case "sql":
+        result = (await import("./utils/sql")).sqlTool(input, options);
+        break;
+      case "cron":
+        result = (await import("./utils/cron")).cronTool(input, options);
+        break;
+      default:
+        throw new Error("未知工具。");
+    }
+    self.postMessage({ result });
+  } catch (error) {
+    self.postMessage({
+      error: error instanceof Error ? error.message : "处理失败，请检查输入。",
+    });
+  }
+};

@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env*
+!.env.example
+test-results/
+playwright-report/
+*.tsbuildinfo
+artifacts/
+
+# Local design documents
+*设计文档*.md
