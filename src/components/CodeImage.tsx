@@ -9,6 +9,7 @@ import {
   languages,
   languageGroups,
   imagePresets,
+  imageFilename,
   sampleCode,
   validateCode,
   type ImageOptions,
@@ -30,6 +31,7 @@ export default function CodeImage() {
     [exporting, setExporting] = useState(false),
     [replace, setReplace] = useState(false);
   const [languageSearch, setLanguageSearch] = useState("");
+  const [widthChoice, setWidthChoice] = useState("800");
   const [zoom, setZoom] = useState("fit");
   const [size, setSize] = useState({ width: 0, height: 0 });
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -125,7 +127,7 @@ export default function CodeImage() {
         const url = URL.createObjectURL(await blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = "wind-code.png";
+        link.download = imageFilename();
         link.click();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
         setNotice("PNG 已生成。");
@@ -264,6 +266,69 @@ export default function CodeImage() {
           disabled={exporting}
         >
           <div className="shot-settings">
+            {select(
+              "宽度模式",
+              options.widthMode,
+              [
+                ["auto", "自动宽度"],
+                ["fixed", "指定宽度"],
+              ],
+              (v) => update("widthMode", v as ImageOptions["widthMode"]),
+            )}
+            {options.widthMode === "fixed" && (
+              <>
+                {select(
+                  "画布宽度",
+                  widthChoice,
+                  [
+                    ["640", "640 px"],
+                    ["800", "800 px"],
+                    ["1200", "1200 px"],
+                    ["custom", "自定义"],
+                  ],
+                  (v) => {
+                    setWidthChoice(v);
+                    if (v !== "custom") update("width", Number(v));
+                  },
+                )}
+                {widthChoice === "custom" && (
+                  <label className="shot-field shot-wide">
+                    自定义宽度
+                    <input
+                      type="number"
+                      aria-label="自定义宽度"
+                      min={320}
+                      max={2400}
+                      step={1}
+                      value={
+                        Number.isFinite(options.width) ? options.width : ""
+                      }
+                      onChange={(e) =>
+                        update(
+                          "width",
+                          e.target.value === "" ? NaN : Number(e.target.value),
+                        )
+                      }
+                      disabled={exporting}
+                    />
+                  </label>
+                )}
+                <label className="shot-check shot-wide">
+                  <input
+                    type="checkbox"
+                    checked={options.wrap}
+                    onChange={(e) => update("wrap", e.target.checked)}
+                    disabled={exporting}
+                  />
+                  长行自动换行
+                </label>
+                <p className="shot-setting-help shot-wide">
+                  宽度包含外边距，按 1×
+                  计算。换行只影响图片，续行不重复显示行号。
+                </p>
+              </>
+            )}
+
             {select(
               "主题",
               options.theme,
@@ -502,13 +567,13 @@ export default function CodeImage() {
           <p>
             预览和导出使用同一张画布，支持中文、透明背景和 1× / 2× / 3×
             倍率。字体使用设备上的等宽字体，跨设备可能略有差异。Tab
-            显示为四个空格，长行请手动换行。
+            显示为四个空格。可在外观设置中指定图片宽度并开启长行换行，编辑区源码保持不变。
           </p>
         </details>
         <details>
           <summary>为什么不能导出？</summary>
           <p>
-            空代码、超长行或超出 1600
+            空代码、关闭换行后超出指定宽度的长行或超出 1600
             万像素的图片会暂停导出，请减少代码、字号或倍率。复制图片需要浏览器支持和剪贴板权限，失败时可以下载
             PNG。
           </p>

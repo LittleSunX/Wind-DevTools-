@@ -89,6 +89,10 @@ try {
   const dp = page.waitForEvent("download");
   await downloadButton.click();
   const download = await dp;
+  assert.match(
+    download.suggestedFilename(),
+    /^wind-code-\d{8}-\d{6}-\d{3}\.png$/,
+  );
   await download.saveAs("artifacts/code-image-export.png");
   const png = await readFile("artifacts/code-image-export.png");
   assert.equal(png.subarray(1, 4).toString(), "PNG");
@@ -178,6 +182,43 @@ try {
   await chooseLanguage("plain");
   await page.getByRole("alert").filter({ hasText: "单行" }).waitFor();
   assert.ok(await downloadButton.isDisabled());
+  // Long lines wrap only in the image; fixed width includes padding and scales exactly.
+  await (await field("宽度模式")).selectOption("fixed");
+  await (await field("画布宽度")).selectOption("640");
+  await (await field("导出倍率")).selectOption("2");
+  await ready();
+  assert.equal(await page.locator("canvas").evaluate((c) => c.width), 1280);
+  assert.equal(await (await field("代码")).textContent(), "x".repeat(600));
+  const fixedDownload = page.waitForEvent("download");
+  await downloadButton.click();
+  const fixedFile = await fixedDownload;
+  await fixedFile.saveAs("artifacts/code-image-wrapped.png");
+  assert.equal(
+    (await readFile("artifacts/code-image-wrapped.png")).readUInt32BE(16),
+    1280,
+  );
+  await (await field("长行自动换行")).uncheck();
+  await page.getByRole("alert").filter({ hasText: "第 1 行" }).waitFor();
+  assert.ok(await downloadButton.isDisabled());
+  await (await field("长行自动换行")).check();
+  await ready();
+  await (await field("画布宽度")).selectOption("custom");
+  for (const value of ["", "319", "2401", "640.5"]) {
+    await (await field("自定义宽度")).fill(value);
+    await page.getByRole("alert").filter({ hasText: "320–2400" }).waitFor();
+    assert.ok(await downloadButton.isDisabled());
+  }
+  await (await field("自定义宽度")).fill("721");
+  await ready();
+  assert.equal(await page.locator("canvas").evaluate((c) => c.width), 1442);
+  await (await field("自定义宽度")).fill("320");
+  await (await field("代码")).fill("W".repeat(12000));
+  await page.getByRole("alert").filter({ hasText: "图片尺寸过大" }).waitFor();
+  assert.ok(await downloadButton.isDisabled());
+  await (await field("代码")).fill("恢复正常");
+  await ready();
+  await (await field("宽度模式")).selectOption("auto");
+  await ready();
   await page.reload();
   await ready();
   assert.ok(!(await (await field("代码")).innerText()).includes(marker));

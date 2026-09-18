@@ -346,3 +346,10 @@
 .shot-export .shot-field select {
   width: auto;
 }
+
+.shot-setting-help {
+  margin: 0;
+  color: #69758a;
+  font-size: 12px;
+  line-height: 1.7;
+}

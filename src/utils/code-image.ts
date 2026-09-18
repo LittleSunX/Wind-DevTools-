@@ -1,3 +1,4 @@
+import { layoutCodeLines } from "./code-layout";
 export type Segment = { text: string; type: string };
 export type ImageOptions = {
   theme: string;
@@ -9,6 +10,9 @@ export type ImageOptions = {
   lineNumbers: boolean;
   windowBar: boolean;
   title: string;
+  widthMode: "auto" | "fixed";
+  width: number;
+  wrap: boolean;
 };
 export const sampleCode = `// 让代码，也有好看的表达。
 interface Developer {
@@ -113,6 +117,9 @@ export const defaults: ImageOptions = {
   lineNumbers: true,
   windowBar: true,
   title: "hello.ts",
+  widthMode: "auto",
+  width: 800,
+  wrap: true,
 };
 export function validateCode(code: string) {
   if (!code.trim()) throw new Error("请输入代码，或加载示例。");
@@ -208,19 +215,37 @@ export function drawCode(
     ? ctx.measureText(String(lines.length)).width + 24
     : 0;
   const content = Math.max(
-    ...lines.map(
-      (line) => ctx.measureText(line.map((s) => s.text).join("")).width,
+    ...lines.map((line) =>
+      line.reduce(
+        (sum, segment) => sum + ctx.measureText(segment.text).width,
+        0,
+      ),
     ),
   );
-  const panelWidth = Math.max(420, Math.ceil(content + gutter + 56));
+  if (
+    o.widthMode === "fixed" &&
+    (!Number.isInteger(o.width) || o.width < 320 || o.width > 2400)
+  )
+    throw new Error("画布宽度请输入 320–2400 之间的整数（px）。");
+  const panelWidth =
+    o.widthMode === "fixed"
+      ? o.width - o.padding * 2
+      : Math.max(420, Math.ceil(content + gutter + 56));
+  const rows = layoutCodeLines(
+    lines,
+    panelWidth - gutter - 56,
+    o.widthMode === "fixed" && o.wrap,
+    (text) => ctx.measureText(text).width,
+  );
   const lineHeight = Math.ceil(o.fontSize * 1.65);
   const header = o.windowBar ? 48 : 0;
-  const panelHeight = header + 48 + lines.length * lineHeight;
+  const panelHeight = header + 48 + rows.length * lineHeight;
   const width = panelWidth + o.padding * 2,
     height = panelHeight + o.padding * 2;
-  if (width > 2400) throw new Error("单行代码太长，请手动换行或缩小字号。");
+  if (width > 2400)
+    throw new Error("单行代码太长，请使用指定宽度并开启长行换行，或缩小字号。");
   if (width * height * o.scale * o.scale > 16000000 || height * o.scale > 12000)
-    throw new Error("图片尺寸过大，请减少代码、字号、内边距或导出倍率。");
+    throw new Error("图片尺寸过大，请减少代码、字号、外边距或导出倍率。");
   canvas.width = width * o.scale;
   canvas.height = height * o.scale;
   ctx.scale(o.scale, o.scale);
@@ -271,17 +296,18 @@ export function drawCode(
   }
   ctx.font = font;
   ctx.textBaseline = "top";
-  lines.forEach((line, i) => {
+  rows.forEach((row, i) => {
     const y = o.padding + header + 24 + i * lineHeight;
     let x = o.padding + 28;
     if (o.lineNumbers) {
       ctx.fillStyle = t.muted;
       ctx.textAlign = "right";
-      ctx.fillText(String(i + 1), x + gutter - 24, y);
+      if (row.lineNumber !== null)
+        ctx.fillText(String(row.lineNumber), x + gutter - 24, y);
       ctx.textAlign = "left";
       x += gutter;
     }
-    for (const seg of line) {
+    for (const seg of row.segments) {
       ctx.fillStyle = t.colors[seg.type] || t.text;
       ctx.fillText(seg.text, x, y);
       x += ctx.measureText(seg.text).width;
@@ -299,4 +325,10 @@ export function canvasBlob(canvas: HTMLCanvasElement): Promise<Blob> {
       "image/png",
     ),
   );
+}
+
+export function imageFilename(date = new Date()) {
+  const pad = (value: number, length = 2) =>
+    String(value).padStart(length, "0");
+  return `wind-code-${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}-${pad(date.getMilliseconds(), 3)}.png`;
 }
