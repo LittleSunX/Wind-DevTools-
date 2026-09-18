@@ -1,7 +1,10 @@
 import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
 import { mkdir, readFile } from "node:fs/promises";
-const browser = await chromium.launch({ channel: "chrome", headless: true });
+const browser = await chromium.launch({
+  channel: process.env.PW_CHANNEL === "bundled" ? undefined : "chrome",
+  headless: true,
+});
 const base = process.argv[2] || "http://localhost:4173";
 const context = await browser.newContext({
   viewport: { width: 1440, height: 1050 },
@@ -166,12 +169,13 @@ try {
   );
   assert.ok(requests.every((r) => !r.includes(marker)));
   assert.ok(requests.every((r) => r.startsWith(base)));
-  assert.equal(
-    await page.evaluate(() =>
-      JSON.stringify({ ...localStorage, ...sessionStorage }),
-    ),
-    "{}",
+  const saved = await page.evaluate(() =>
+    JSON.stringify({ ...localStorage, ...sessionStorage }),
   );
+  assert.ok(!saved.includes(marker));
+  assert.deepEqual(await page.evaluate(() => Object.keys(localStorage)), [
+    "wind.canvas.preferences.v1",
+  ]);
   await closePanels();
   await page.getByRole("button", { name: "清空", exact: true }).click();
   await page.getByRole("alert").waitFor();

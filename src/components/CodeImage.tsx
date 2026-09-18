@@ -1,3 +1,5 @@
+import CanvasSettings from "./CanvasSettings";
+import { readPreferences, writePreferences } from "../utils/canvas-preferences";
 import CanvasPopover from "./CanvasPopover";
 import CodeEditor from "./CodeEditor";
 import { trackTool } from "../analytics";
@@ -31,9 +33,37 @@ export default function CodeImage() {
     [exporting, setExporting] = useState(false),
     [replace, setReplace] = useState(false);
   const [languageSearch, setLanguageSearch] = useState("");
-  const [widthChoice, setWidthChoice] = useState("800");
   const [zoom, setZoom] = useState("fit");
-  const [size, setSize] = useState({ width: 0, height: 0 });
+  const [size, setSize] = useState({ width: 0, height: 0, scale: 2 });
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
+  const rendered = useRef<{
+    code: string;
+    language: string;
+    options: ImageOptions;
+  } | null>(null);
+  const canExport =
+    ready &&
+    rendered.current?.code === code &&
+    rendered.current?.language === language &&
+    rendered.current?.options === options;
+  const hasPreview = size.width > 0 && code.trim().length > 0;
+  useEffect(() => {
+    try {
+      setOptions(readPreferences(localStorage));
+    } catch {
+      /* Private storage may be unavailable. */
+    }
+    setPreferencesLoaded(true);
+  }, []);
+  useEffect(() => {
+    if (preferencesLoaded) {
+      try {
+        writePreferences(localStorage, options);
+      } catch {
+        /* Keep tools usable without storage. */
+      }
+    }
+  }, [options, preferencesLoaded]);
   const canvas = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     setTokens(null);
@@ -90,7 +120,15 @@ export default function CodeImage() {
     )
       return;
     try {
-      setSize(drawCode(canvas.current, tokens.segments, options));
+      const buffer = document.createElement("canvas");
+      const dimensions = drawCode(buffer, tokens.segments, options);
+      const context = canvas.current.getContext("2d");
+      if (!context) throw new Error("当前浏览器无法创建图片。");
+      canvas.current.width = buffer.width;
+      canvas.current.height = buffer.height;
+      context.drawImage(buffer, 0, 0);
+      rendered.current = { code, language, options };
+      setSize({ ...dimensions, scale: options.scale });
       setError("");
       setReady(true);
     } catch (e) {
@@ -111,7 +149,7 @@ export default function CodeImage() {
     setReplace(false);
   }
   async function exportImage(copy: boolean) {
-    if (!ready || !canvas.current) return;
+    if (!canExport || !canvas.current) return;
     setExporting(true);
     setNotice("");
     try {
@@ -265,170 +303,15 @@ export default function CodeImage() {
           title="外观设置"
           disabled={exporting}
         >
-          <div className="shot-settings">
-            {select(
-              "宽度模式",
-              options.widthMode,
-              [
-                ["auto", "自动宽度"],
-                ["fixed", "指定宽度"],
-              ],
-              (v) => update("widthMode", v as ImageOptions["widthMode"]),
-            )}
-            {options.widthMode === "fixed" && (
-              <>
-                {select(
-                  "画布宽度",
-                  widthChoice,
-                  [
-                    ["640", "640 px"],
-                    ["800", "800 px"],
-                    ["1200", "1200 px"],
-                    ["custom", "自定义"],
-                  ],
-                  (v) => {
-                    setWidthChoice(v);
-                    if (v !== "custom") update("width", Number(v));
-                  },
-                )}
-                {widthChoice === "custom" && (
-                  <label className="shot-field shot-wide">
-                    自定义宽度
-                    <input
-                      type="number"
-                      aria-label="自定义宽度"
-                      min={320}
-                      max={2400}
-                      step={1}
-                      value={
-                        Number.isFinite(options.width) ? options.width : ""
-                      }
-                      onChange={(e) =>
-                        update(
-                          "width",
-                          e.target.value === "" ? NaN : Number(e.target.value),
-                        )
-                      }
-                      disabled={exporting}
-                    />
-                  </label>
-                )}
-                <label className="shot-check shot-wide">
-                  <input
-                    type="checkbox"
-                    checked={options.wrap}
-                    onChange={(e) => update("wrap", e.target.checked)}
-                    disabled={exporting}
-                  />
-                  长行自动换行
-                </label>
-                <p className="shot-setting-help shot-wide">
-                  宽度包含外边距，按 1×
-                  计算。换行只影响图片，续行不重复显示行号。
-                </p>
-              </>
-            )}
-
-            {select(
-              "主题",
-              options.theme,
-              [
-                ["night", "午夜蓝"],
-                ["graphite", "石墨黑"],
-                ["light", "明亮"],
-              ],
-              (v) => update("theme", v),
-            )}
-            {select(
-              "背景",
-              options.background,
-              [
-                ["blue", "蓝紫渐变"],
-                ["sunset", "日落渐变"],
-                ["slate", "雾灰渐变"],
-                ["solid", "纯色"],
-                ["transparent", "透明"],
-              ],
-              (v) => update("background", v),
-            )}
-            {options.background === "solid" ? (
-              <label className="shot-field">
-                背景颜色
-                <input
-                  type="color"
-                  aria-label="背景颜色"
-                  value={options.color}
-                  onChange={(e) => update("color", e.target.value)}
-                  disabled={exporting}
-                />
-              </label>
-            ) : (
-              select(
-                "字号",
-                String(options.fontSize),
-                [
-                  ["14", "14 px"],
-                  ["16", "16 px"],
-                  ["18", "18 px"],
-                  ["20", "20 px"],
-                  ["24", "24 px"],
-                ],
-                (v) => update("fontSize", Number(v)),
-              )
-            )}
-            {options.background === "solid" &&
-              select(
-                "字号",
-                String(options.fontSize),
-                [
-                  ["14", "14 px"],
-                  ["16", "16 px"],
-                  ["18", "18 px"],
-                  ["20", "20 px"],
-                  ["24", "24 px"],
-                ],
-                (v) => update("fontSize", Number(v)),
-              )}
-            {select(
-              "外边距",
-              String(options.padding),
-              [
-                ["16", "16 px"],
-                ["32", "32 px"],
-                ["48", "48 px"],
-                ["64", "64 px"],
-              ],
-              (v) => update("padding", Number(v)),
-            )}
-            <label className="shot-field shot-wide">
-              窗口标题
-              <input
-                aria-label="窗口标题"
-                maxLength={80}
-                value={options.title}
-                onChange={(e) => update("title", e.target.value)}
-                disabled={exporting || !options.windowBar}
-              />
-            </label>
-            <label className="shot-check">
-              <input
-                type="checkbox"
-                checked={options.lineNumbers}
-                onChange={(e) => update("lineNumbers", e.target.checked)}
-                disabled={exporting}
-              />
-              显示行号
-            </label>
-            <label className="shot-check">
-              <input
-                type="checkbox"
-                checked={options.windowBar}
-                onChange={(e) => update("windowBar", e.target.checked)}
-                disabled={exporting}
-              />
-              窗口标题栏
-            </label>
-          </div>
+          <CanvasSettings
+            options={options}
+            update={update}
+            exporting={exporting}
+            onReset={() => {
+              setReady(false);
+              setOptions({ ...defaults, title: options.title });
+            }}
+          />
         </CanvasPopover>
       </div>
       <div className="shot-layout">
@@ -490,16 +373,33 @@ export default function CodeImage() {
             <canvas
               ref={canvas}
               role="img"
-              aria-label="代码画布预览，内容与编辑区代码一致"
+              aria-label={
+                canExport
+                  ? "代码画布预览，内容与编辑区代码一致"
+                  : "上一次生成的预览，当前内容尚未生成"
+              }
               style={{
-                display: ready ? "block" : "none",
+                display: hasPreview ? "block" : "none",
                 width:
                   zoom === "fit"
                     ? undefined
-                    : `${(size.width / options.scale) * Number(zoom)}px`,
+                    : `${(size.width / size.scale) * Number(zoom)}px`,
               }}
             />
-            {!ready && <p>{error ? "请调整输入或设置" : "正在生成预览…"}</p>}
+            {!canExport && (
+              <p
+                className={hasPreview ? "shot-preview-status" : undefined}
+                role="status"
+              >
+                {error
+                  ? hasPreview
+                    ? "保留上次预览 · 请修正输入或设置"
+                    : "请调整输入或设置"
+                  : hasPreview
+                    ? "正在更新预览…"
+                    : "正在生成预览…"}
+              </p>
+            )}
           </div>
           <label className="shot-zoom">
             预览缩放
@@ -532,14 +432,14 @@ export default function CodeImage() {
             )}
 
             <button
-              disabled={!ready || exporting}
+              disabled={!canExport || exporting}
               onClick={() => exportImage(true)}
             >
               复制图片
             </button>
             <button
               className="primary"
-              disabled={!ready || exporting}
+              disabled={!canExport || exporting}
               onClick={() => exportImage(false)}
             >
               {exporting ? "正在导出…" : "下载 PNG"}{" "}
@@ -560,7 +460,7 @@ export default function CodeImage() {
           粘贴代码，选择语言和外观，即可复制或下载 PNG。支持 28
           种语言与格式；Tab 缩进，Ctrl / ⌘ + Z 撤销，Ctrl / ⌘ + F 查找，按 Esc
           后 Tab
-          可离开编辑器。内容只在浏览器内处理，不执行代码、不上传，也不自动保存。刷新页面会恢复示例。
+          可离开编辑器。内容只在浏览器内处理，不执行代码、不上传。仅在本机记住外观偏好，不保存代码或窗口标题；刷新页面会恢复示例。
         </p>
         <details>
           <summary>图片和预览一致吗？</summary>

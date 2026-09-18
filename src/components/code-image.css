@@ -353,3 +353,19 @@
   font-size: 12px;
   line-height: 1.7;
 }
+
+.shot-preview-stage {
+  position: relative;
+}
+.shot-preview-status {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 7px 12px;
+  border-radius: 6px;
+  background: #ffffffed;
+  white-space: nowrap;
+  box-shadow: 0 2px 12px #19233d14;
+}

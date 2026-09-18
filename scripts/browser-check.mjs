@@ -1,7 +1,10 @@
 import { chromium, expect } from "@playwright/test";
 import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
-const browser = await chromium.launch({ channel: "chrome", headless: true });
+const browser = await chromium.launch({
+  channel: process.env.PW_CHANNEL === "bundled" ? undefined : "chrome",
+  headless: true,
+});
 const page = await browser.newPage({ viewport: { width: 1440, height: 1050 } });
 const errors = [];
 page.on("pageerror", (error) => errors.push(error.message));

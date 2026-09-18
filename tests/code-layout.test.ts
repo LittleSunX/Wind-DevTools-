@@ -80,3 +80,14 @@ describe("code image wrapping", () => {
     );
   });
 });
+
+it("moves a complete identifier to the next row when it fits", () => {
+  const rows = layoutCodeLines(
+    [[{ text: "let variable = 1;", type: "" }]],
+    10,
+    true,
+    measure,
+  );
+  expect(rows.map(text)).toEqual(["let ", "variable =", " 1;"]);
+  expect(rows.map(text).join("")).toBe("let variable = 1;");
+});

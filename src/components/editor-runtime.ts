@@ -21,7 +21,7 @@ import {
   HighlightStyle,
 } from "@codemirror/language";
 import { json } from "@codemirror/lang-json";
-import { sql, MySQL, PostgreSQL, SQLite } from "@codemirror/lang-sql";
+import { sql, MySQL, PostgreSQL, SQLite, PLSQL } from "@codemirror/lang-sql";
 import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
 import { tags } from "@lezer/highlight";
 
@@ -59,11 +59,13 @@ export function createEditor(parent: HTMLElement, initial: EditorOptions) {
             ? json()
             : sql({
                 dialect:
-                  o.dialect === "postgresql"
-                    ? PostgreSQL
-                    : o.dialect === "sqlite"
-                      ? SQLite
-                      : MySQL,
+                  o.dialect === "plsql"
+                    ? PLSQL
+                    : o.dialect === "postgresql"
+                      ? PostgreSQL
+                      : o.dialect === "sqlite"
+                        ? SQLite
+                        : MySQL,
               }),
           syntaxHighlighting(colors),
           bracketMatching(),

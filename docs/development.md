@@ -8,7 +8,7 @@
 | 开发与构建 | Vite、静态 HTML 预渲染                     |
 | 工具处理   | Web Worker、sql-formatter、cron-parser     |
 | 代码图片   | Prism 语法高亮、Canvas 渲染与 PNG 导出     |
-| 验证       | Vitest、Playwright + 本机 Chrome、Prettier |
+| 验证       | Vitest、Playwright（Chromium / Firefox / WebKit）、Prettier |
 
 ### 常用命令
 
@@ -64,6 +64,21 @@ docs/images/                项目展示图片
 ```
 
 新增工具时，将处理逻辑放入 `src/utils/`，再接入工具清单、页面和 Worker，并补充相应测试。处理模块保持本地运行，统计仅记录允许的事件字段。
+
+### 自动化与浏览器覆盖
+
+GitHub Actions 在 push 和 pull request 时执行格式检查、单元测试、构建检查、Chrome 系列浏览器回归和跨浏览器验收。失败时上传测试截图、PNG 等产物。
+
+本机运行跨浏览器验收：
+
+```sh
+npx playwright install chromium firefox webkit
+npm run test:compat
+```
+
+先完成构建并启动预览服务。验收覆盖 Chromium、Firefox、WebKit 与 WebKit 触屏模拟，包括旧图保留但禁止导出、偏好隐私、语言菜单和 PNG 下载。WebKit 模拟不等同于真机 Safari，软键盘和系统剪贴板仍需真机验收。
+
+原有浏览器脚本默认使用本机 Chrome；设置 `PW_CHANNEL=bundled` 可改用 Playwright 自带 Chromium，CI 使用此模式。
 
 ---
 

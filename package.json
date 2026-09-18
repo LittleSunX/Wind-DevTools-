@@ -12,7 +12,8 @@
     "format": "prettier --write src scripts tests *.json *.ts index.html",
     "format:check": "prettier --check src scripts tests *.json *.ts index.html",
     "test:build": "node scripts/build-check.mjs",
-    "test:code-image": "node scripts/code-image-check.mjs"
+    "test:code-image": "node scripts/code-image-check.mjs",
+    "test:compat": "node scripts/compat-check.mjs"
   },
   "dependencies": {
     "@codemirror/commands": "^6.11.1",
