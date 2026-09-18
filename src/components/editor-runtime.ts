@@ -1,6 +1,7 @@
 import { Compartment, EditorState } from "@codemirror/state";
 import {
   EditorView,
+  Decoration,
   keymap,
   lineNumbers,
   highlightActiveLine,
@@ -28,7 +29,8 @@ export interface EditorOptions {
   id: string;
   label: string;
   value: string;
-  language: "json" | "sql";
+  language: "json" | "sql" | "plain";
+  segments?: { text: string; type: string }[];
   dialect?: string;
   indent?: string;
   readOnly?: boolean;
@@ -50,7 +52,7 @@ export function createEditor(parent: HTMLElement, initial: EditorOptions) {
   let options = initial;
   const config = new Compartment();
   const configuration = (o: EditorOptions) => [
-    o.value.length > 200_000
+    o.value.length > 200_000 || o.language === "plain"
       ? []
       : [
           o.language === "json"
@@ -67,6 +69,24 @@ export function createEditor(parent: HTMLElement, initial: EditorOptions) {
           bracketMatching(),
           highlightSelectionMatches(),
         ],
+    EditorView.decorations.of(
+      Decoration.set(
+        (() => {
+          let offset = 0;
+          return (o.segments || []).flatMap((segment) => {
+            const start = offset;
+            offset += segment.text.length;
+            return segment.type && offset > start && offset <= o.value.length
+              ? [
+                  Decoration.mark({
+                    class: `shot-token-${segment.type}`,
+                  }).range(start, offset),
+                ]
+              : [];
+          });
+        })(),
+      ),
+    ),
     indentUnit.of(" ".repeat(Number(o.indent) || 2)),
     EditorState.tabSize.of(Number(o.indent) || 2),
     EditorState.readOnly.of(!!o.readOnly),
@@ -120,11 +140,12 @@ export function createEditor(parent: HTMLElement, initial: EditorOptions) {
   return {
     update(next: EditorOptions) {
       const oldKey = key(options);
+      const oldSegments = options.segments;
       options = next;
       if (view.state.doc.toString() !== next.value) {
         // Explicit replacement (sample, clear, result) starts a fresh undo history.
         view.setState(state(next));
-      } else if (key(next) !== oldKey) {
+      } else if (key(next) !== oldKey || oldSegments !== next.segments) {
         view.dispatch({ effects: config.reconfigure(configuration(next)) });
       }
     },

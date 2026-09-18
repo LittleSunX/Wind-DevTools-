@@ -22,16 +22,86 @@ const wind: Developer = {
 };
 
 console.log("Hello, developer!", wind);`;
-export const languages = [
-  ["typescript", "TypeScript"],
-  ["javascript", "JavaScript"],
-  ["java", "Java"],
-  ["python", "Python"],
-  ["sql", "SQL"],
-  ["json", "JSON"],
-  ["css", "CSS"],
-  ["markup", "HTML / XML"],
-  ["plain", "纯文本"],
+export const languageGroups = [
+  {
+    label: "前端",
+    items: [
+      ["typescript", "TypeScript"],
+      ["javascript", "JavaScript"],
+      ["jsx", "JSX"],
+      ["tsx", "TSX"],
+      ["markup", "HTML"],
+      ["css", "CSS"],
+      ["vue", "Vue"],
+    ],
+  },
+  {
+    label: "后端与应用",
+    items: [
+      ["java", "Java"],
+      ["python", "Python"],
+      ["go", "Go"],
+      ["rust", "Rust"],
+      ["c", "C"],
+      ["cpp", "C++"],
+      ["csharp", "C#"],
+      ["php", "PHP"],
+      ["ruby", "Ruby"],
+      ["kotlin", "Kotlin"],
+      ["swift", "Swift"],
+    ],
+  },
+  {
+    label: "脚本与配置",
+    items: [
+      ["bash", "Bash"],
+      ["powershell", "PowerShell"],
+      ["json", "JSON"],
+      ["yaml", "YAML"],
+      ["toml", "TOML"],
+      ["xml", "XML"],
+      ["docker", "Dockerfile"],
+      ["markdown", "Markdown"],
+    ],
+  },
+  {
+    label: "其他",
+    items: [
+      ["sql", "SQL"],
+      ["plain", "纯文本"],
+    ],
+  },
+];
+export const languages = languageGroups.flatMap((group) => group.items);
+export const imagePresets = [
+  {
+    name: "午夜蓝",
+    theme: "night",
+    background: "blue",
+    padding: 48,
+    fontSize: 18,
+  },
+  {
+    name: "暖日落",
+    theme: "graphite",
+    background: "sunset",
+    padding: 48,
+    fontSize: 18,
+  },
+  {
+    name: "极简白",
+    theme: "light",
+    background: "slate",
+    padding: 32,
+    fontSize: 16,
+  },
+  {
+    name: "透明底",
+    theme: "graphite",
+    background: "transparent",
+    padding: 32,
+    fontSize: 18,
+  },
 ];
 export const defaults: ImageOptions = {
   theme: "night",

@@ -1,0 +1,86 @@
+import { useEffect, useId, useRef, type ReactNode } from "react";
+
+export default function CanvasPopover({
+  label,
+  title,
+  children,
+  disabled = false,
+  alignEnd = false,
+}: {
+  label: string;
+  title: string;
+  children: ReactNode;
+  disabled?: boolean;
+  alignEnd?: boolean;
+}) {
+  const id = useId();
+  const trigger = useRef<HTMLButtonElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const close = () => {
+      if (panel.current?.matches(":popover-open")) panel.current.hidePopover();
+    };
+    window.addEventListener("resize", close);
+    window.addEventListener("scroll", close);
+    return () => {
+      window.removeEventListener("resize", close);
+      window.removeEventListener("scroll", close);
+    };
+  }, []);
+  return (
+    <div className="shot-popover-anchor">
+      <button
+        ref={trigger}
+        popoverTarget={id}
+        disabled={disabled}
+        aria-haspopup="dialog"
+      >
+        {label} <span aria-hidden="true">⌄</span>
+      </button>
+      <div
+        ref={panel}
+        id={id}
+        popover="auto"
+        role="dialog"
+        aria-label={title}
+        className="shot-popover"
+        onBeforeToggle={(event) => {
+          if (event.newState !== "open" || !panel.current || !trigger.current)
+            return;
+          const rect = trigger.current.getBoundingClientRect();
+          const width = Math.min(360, window.innerWidth - 32);
+          panel.current.style.setProperty(
+            "--popover-left",
+            `${Math.max(16, Math.min(alignEnd ? rect.right - width : rect.left, window.innerWidth - width - 16))}px`,
+          );
+          panel.current.style.setProperty(
+            "--popover-top",
+            `${rect.bottom + 8}px`,
+          );
+          panel.current.style.setProperty(
+            "--popover-height",
+            `${Math.max(180, window.innerHeight - rect.bottom - 24)}px`,
+          );
+        }}
+        onToggle={(event) => {
+          if (event.newState === "open")
+            panel.current
+              ?.querySelector<HTMLInputElement>("input[type=search]")
+              ?.focus();
+        }}
+      >
+        <div className="shot-popover-heading">
+          <strong>{title}</strong>
+          <button
+            aria-label={`关闭${title}`}
+            popoverTarget={id}
+            popoverTargetAction="hide"
+          >
+            关闭
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}

@@ -1,5 +1,15 @@
 export const tools = [
   {
+    id: "code-image",
+    name: "代码画布",
+    category: "创作与分享",
+    icon: "⌘",
+    description: "将代码转为精美图片。实时预览，一键导出高清 PNG。",
+    tags: ["语法高亮", "图片导出"],
+    hint: "本地生成图片，不上传代码。",
+    example: "",
+  },
+  {
     id: "json",
     name: "JSON 格式化",
     category: "数据处理",
@@ -51,16 +61,6 @@ export const tools = [
     tags: ["Linux", "Quartz", "执行时间"],
     hint: "Quartz 支持常用 6 字段；不支持年份和 L、W、#。",
     example: "0 */5 * * * ?",
-  },
-  {
-    id: "code-image",
-    name: "代码画布",
-    category: "创作与分享",
-    icon: "⌘",
-    description: "将代码转为精美图片。实时预览，一键导出高清 PNG。",
-    tags: ["语法高亮", "图片导出"],
-    hint: "本地生成图片，不上传代码。",
-    example: "",
   },
 ] as const;
 export type ToolId = (typeof tools)[number]["id"];

@@ -1,3 +1,5 @@
+import CanvasPopover from "./CanvasPopover";
+import CodeEditor from "./CodeEditor";
 import { trackTool } from "../analytics";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -5,6 +7,8 @@ import {
   defaults,
   drawCode,
   languages,
+  languageGroups,
+  imagePresets,
   sampleCode,
   validateCode,
   type ImageOptions,
@@ -25,6 +29,8 @@ export default function CodeImage() {
     [ready, setReady] = useState(false),
     [exporting, setExporting] = useState(false),
     [replace, setReplace] = useState(false);
+  const [languageSearch, setLanguageSearch] = useState("");
+  const [zoom, setZoom] = useState("fit");
   const [size, setSize] = useState({ width: 0, height: 0 });
   const canvas = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -99,7 +105,7 @@ export default function CodeImage() {
   }
   function changeCode(value: string) {
     setReady(false);
-    setCode(value);
+    setCode(value.replace(/\r\n?/g, "\n"));
     setReplace(false);
   }
   async function exportImage(copy: boolean) {
@@ -174,47 +180,90 @@ export default function CodeImage() {
         </div>
         <span className="shot-badge">PNG · LOCAL</span>
       </section>
-      <div className="shot-layout">
-        <section className="shot-controls" aria-label="代码与外观设置">
-          <div className="shot-editor-title">
-            <label htmlFor="shot-code">代码</label>
-            <div>
-              <button
-                onClick={() =>
-                  code ? setReplace(true) : changeCode(sampleCode)
-                }
-                disabled={exporting}
-              >
-                加载示例
-              </button>
-              <button onClick={() => changeCode("")} disabled={exporting}>
-                清空
-              </button>
-            </div>
+      <div className="shot-toolbar" aria-label="画布工具栏">
+        <CanvasPopover
+          label={`语言 · ${languages.find(([id]) => id === language)?.[1]}`}
+          title="选择语言"
+          disabled={exporting}
+        >
+          <div className="shot-language-search">
+            <input
+              type="search"
+              aria-label="搜索语言"
+              placeholder="搜索语言，例如 Java、TSX"
+              value={languageSearch}
+              onChange={(e) => setLanguageSearch(e.target.value)}
+            />
           </div>
-          {replace && (
-            <div className="replace-prompt">
-              替换当前代码？
-              <button onClick={() => changeCode(sampleCode)}>替换</button>
-              <button onClick={() => setReplace(false)}>取消</button>
-            </div>
-          )}
-          <textarea
-            id="shot-code"
-            value={code}
-            onChange={(e) => changeCode(e.target.value)}
-            spellCheck={false}
-            disabled={exporting}
-            aria-describedby="shot-limit"
-          />
-          <p id="shot-limit" className="shot-caption">
-            {code.length.toLocaleString()} / 12,000 字符 · 最多 160 行
-          </p>
-          <div className="shot-settings">
-            {select("语言", language, languages, (v) => {
-              setReady(false);
-              setLanguage(v);
+          <div className="shot-language-list">
+            {languageGroups.map((group) => {
+              const items = group.items.filter(([id, name]) =>
+                `${id} ${name}`
+                  .toLowerCase()
+                  .includes(languageSearch.trim().toLowerCase()),
+              );
+              return items.length ? (
+                <div key={group.label}>
+                  <h3>{group.label}</h3>
+                  {items.map(([id, name]) => (
+                    <button
+                      key={id}
+                      value={id}
+                      aria-pressed={language === id}
+                      onClick={(e) => {
+                        setReady(false);
+                        setLanguage(id);
+                        setLanguageSearch("");
+                        e.currentTarget
+                          .closest<HTMLElement>("[popover]")
+                          ?.hidePopover();
+                      }}
+                    >
+                      {name}
+                      {language === id && <span aria-hidden="true"> ✓</span>}
+                    </button>
+                  ))}
+                </div>
+              ) : null;
             })}
+            {!languages.some(([id, name]) =>
+              `${id} ${name}`
+                .toLowerCase()
+                .includes(languageSearch.trim().toLowerCase()),
+            ) && <p>未找到匹配语言。</p>}
+          </div>
+        </CanvasPopover>
+        {select(
+          "风格",
+          imagePresets.find(
+            (p) =>
+              p.theme === options.theme &&
+              p.background === options.background &&
+              p.padding === options.padding &&
+              p.fontSize === options.fontSize,
+          )?.name || "custom",
+          [["custom", "自定义"], ...imagePresets.map((p) => [p.name, p.name])],
+          (name) => {
+            const preset = imagePresets.find((p) => p.name === name);
+            if (!preset) return;
+            setReady(false);
+            setNotice("");
+            setOptions((o) => ({
+              ...o,
+              theme: preset.theme,
+              background: preset.background,
+              padding: preset.padding,
+              fontSize: preset.fontSize,
+            }));
+          },
+        )}
+        <CanvasPopover
+          alignEnd
+          label="外观设置"
+          title="外观设置"
+          disabled={exporting}
+        >
+          <div className="shot-settings">
             {select(
               "主题",
               options.theme,
@@ -286,16 +335,6 @@ export default function CodeImage() {
               ],
               (v) => update("padding", Number(v)),
             )}
-            {select(
-              "导出倍率",
-              String(options.scale),
-              [
-                ["1", "1× 标准"],
-                ["2", "2× 高清"],
-                ["3", "3× 超清"],
-              ],
-              (v) => update("scale", Number(v)),
-            )}
             <label className="shot-field shot-wide">
               窗口标题
               <input
@@ -325,6 +364,52 @@ export default function CodeImage() {
               窗口标题栏
             </label>
           </div>
+        </CanvasPopover>
+      </div>
+      <div className="shot-layout">
+        <section className="shot-controls" aria-label="代码编辑">
+          <div className="shot-editor-title">
+            <label htmlFor="shot-code">代码</label>
+            <div>
+              <button
+                onClick={() =>
+                  code ? setReplace(true) : changeCode(sampleCode)
+                }
+                disabled={exporting}
+              >
+                加载示例
+              </button>
+              <button onClick={() => changeCode("")} disabled={exporting}>
+                清空
+              </button>
+            </div>
+          </div>
+          {replace && (
+            <div className="replace-prompt">
+              替换当前代码？
+              <button onClick={() => changeCode(sampleCode)}>替换</button>
+              <button onClick={() => setReplace(false)}>取消</button>
+            </div>
+          )}
+          <CodeEditor
+            id="shot-code"
+            label="代码"
+            value={code}
+            onChange={changeCode}
+            language="plain"
+            indent="4"
+            wrap
+            readOnly={exporting}
+            segments={
+              tokens?.code === code && tokens.language === language
+                ? tokens.segments
+                : undefined
+            }
+            placeholder="粘贴代码开始创作…"
+          />
+          <p id="shot-limit" className="shot-caption">
+            {code.length.toLocaleString()} / 12,000 字符 · 最多 160 行
+          </p>
         </section>
         <section className="shot-preview-panel" aria-label="图片预览">
           <div className="shot-preview-heading">
@@ -333,22 +418,54 @@ export default function CodeImage() {
               {ready ? `${size.width} × ${size.height} px` : "等待生成"}
             </span>
           </div>
-          <div className="shot-preview-stage" aria-busy={!ready && !error}>
+          <div
+            className={`shot-preview-stage ${zoom === "fit" ? "is-fit" : "is-zoomed"}`}
+            aria-busy={!ready && !error}
+          >
             <canvas
               ref={canvas}
               role="img"
-              aria-label="代码画布预览，内容与左侧代码一致"
-              style={{ display: ready ? "block" : "none" }}
+              aria-label="代码画布预览，内容与编辑区代码一致"
+              style={{
+                display: ready ? "block" : "none",
+                width:
+                  zoom === "fit"
+                    ? undefined
+                    : `${(size.width / options.scale) * Number(zoom)}px`,
+              }}
             />
             {!ready && <p>{error ? "请调整输入或设置" : "正在生成预览…"}</p>}
           </div>
+          <label className="shot-zoom">
+            预览缩放
+            <select
+              aria-label="预览缩放"
+              value={zoom}
+              onChange={(e) => setZoom(e.target.value)}
+            >
+              <option value="fit">适应窗口</option>
+              <option value="0.5">50%</option>
+              <option value="1">100%</option>
+              <option value="1.5">150%</option>
+            </select>
+          </label>
           {error && (
             <div className="error-box" role="alert">
               {error}
             </div>
           )}
           <div className="shot-export">
-            <span>无水印 · 本地生成</span>
+            {select(
+              "导出倍率",
+              String(options.scale),
+              [
+                ["1", "1× 标准"],
+                ["2", "2× 高清"],
+                ["3", "3× 超清"],
+              ],
+              (v) => update("scale", Number(v)),
+            )}
+
             <button
               disabled={!ready || exporting}
               onClick={() => exportImage(true)}
@@ -368,15 +485,17 @@ export default function CodeImage() {
             {notice}
           </div>
           <p className="shot-caption">
-            预览自动缩放适应页面，导出保留上方显示的实际分辨率。
+            预览缩放不影响导出，PNG 保留上方显示的实际分辨率。
           </p>
         </section>
       </div>
       <section className="instructions">
         <h2>使用说明</h2>
         <p>
-          粘贴代码，选择语言和外观，即可复制或下载
-          PNG。内容只在浏览器内处理，不执行代码、不上传，也不自动保存。刷新页面会恢复示例。
+          粘贴代码，选择语言和外观，即可复制或下载 PNG。支持 28
+          种语言与格式；Tab 缩进，Ctrl / ⌘ + Z 撤销，Ctrl / ⌘ + F 查找，按 Esc
+          后 Tab
+          可离开编辑器。内容只在浏览器内处理，不执行代码、不上传，也不自动保存。刷新页面会恢复示例。
         </p>
         <details>
           <summary>图片和预览一致吗？</summary>
