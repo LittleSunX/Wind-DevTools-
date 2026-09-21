@@ -43,15 +43,42 @@ export function canvasTools(page) {
   async function png(path) {
     await close();
     await ready();
+    await page.evaluate(() => {
+      if (!window.__windDownloadCaptureInstalled) {
+        const original = HTMLAnchorElement.prototype.click;
+        HTMLAnchorElement.prototype.click = function () {
+          if (this.download && this.href.startsWith("blob:")) {
+            const href = this.href;
+            const name = this.download;
+            window.__windCapturedDownload = fetch(href).then(async (response) => {
+              const bytes = new Uint8Array(await response.arrayBuffer());
+              let binary = "";
+              const chunk = 0x8000;
+              for (let i = 0; i < bytes.length; i += chunk)
+                binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+              return { name, base64: btoa(binary) };
+            });
+          }
+          return original.call(this);
+        };
+        window.__windDownloadCaptureInstalled = true;
+      }
+      window.__windCapturedDownload = null;
+    });
     await download.click();
-    const pending = page.waitForEvent("download");
     await page
       .getByRole("dialog", { name: "导出", exact: true })
       .getByRole("button", { name: "下载 PNG", exact: true })
       .click();
-    const file = await pending;
-    await file.saveAs(path);
-    return { bytes: await readFile(path), name: file.suggestedFilename() };
+    await expect
+      .poll(() => page.evaluate(() => Boolean(window.__windCapturedDownload)))
+      .toBe(true);
+    const captured = await page.evaluate(() => window.__windCapturedDownload);
+    const bytes = Buffer.from(captured.base64, "base64");
+    await import("node:fs/promises").then(({ writeFile }) =>
+      writeFile(path, bytes),
+    );
+    return { bytes, name: captured.name };
   }
   async function dimensions() {
     return artwork.evaluate((el) => ({
