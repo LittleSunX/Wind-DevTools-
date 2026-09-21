@@ -14,6 +14,8 @@ export type ImageOptions = {
   widthMode: "auto" | "fixed";
   width: number;
   wrap: boolean;
+  windowRadius: number;
+  shadow: "none" | "soft" | "strong";
 };
 export const canvasFonts = [
   {
@@ -173,6 +175,8 @@ export const defaults: ImageOptions = {
   widthMode: "auto",
   width: 800,
   wrap: true,
+  windowRadius: 12,
+  shadow: "soft",
 };
 export function validateCode(code: string) {
   if (!code.trim()) throw new Error("请输入代码，或加载示例。");
@@ -287,8 +291,8 @@ export const themes: Record<
     },
   },
 };
-export function imageFilename(date = new Date()) {
+export function imageFilename(date = new Date(), extension = "png") {
   const pad = (value: number, length = 2) =>
     String(value).padStart(length, "0");
-  return `wind-code-${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}-${pad(date.getMilliseconds(), 3)}.png`;
+  return `wind-code-${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}-${pad(date.getMilliseconds(), 3)}.${extension}`;
 }
