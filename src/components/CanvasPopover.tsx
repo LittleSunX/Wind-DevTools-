@@ -6,16 +6,22 @@ export default function CanvasPopover({
   children,
   disabled = false,
   alignEnd = false,
+  openSignal = 0,
 }: {
   label: string;
   title: string;
   children: ReactNode;
   disabled?: boolean;
   alignEnd?: boolean;
+  openSignal?: number;
 }) {
   const id = useId();
   const trigger = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (openSignal > 0 && !disabled && panel.current && !panel.current.matches(":popover-open"))
+      panel.current.showPopover();
+  }, [openSignal, disabled]);
   useEffect(() => {
     const close = () => {
       if (panel.current?.matches(":popover-open")) panel.current.hidePopover();
