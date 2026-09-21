@@ -198,9 +198,17 @@ try {
   await ready();
   assert.match(await editor.inputValue(), /public class Welcome/);
   assert.ok(
+    requests.every((request) => !request.includes("PRIVATE_")),
+    "private code must never appear in request URLs or payloads",
+  );
+  assert.ok(
     requests.every(
-      (request) => request.startsWith(base) && !request.includes("PRIVATE_"),
+      (request) =>
+        request.startsWith(base) ||
+        request.startsWith("blob:") ||
+        request.startsWith("data:"),
     ),
+    "canvas export must not make external requests",
   );
   assert.ok(
     !(await page.evaluate(() =>
