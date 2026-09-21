@@ -17,7 +17,7 @@ for (const [name, engine] of [
   try {
     await page.goto(base + "/tools/code-image");
     const download = page.getByRole("button", {
-      name: "下载 PNG",
+      name: "导出",
       exact: true,
     });
     await expect(download).toBeEnabled();
