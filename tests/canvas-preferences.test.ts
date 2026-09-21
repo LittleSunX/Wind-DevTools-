@@ -46,6 +46,14 @@ describe("canvas appearance preferences", () => {
         widthMode: "fixed",
         windowRadius: 18,
         shadow: "strong",
+        windowStyle: "minimal",
+        codePadding: 40,
+        aspectRatio: "16:9",
+        gradientStart: "#123456",
+        gradientEnd: "#abcdef",
+        gradientAngle: 210,
+        startLine: 100,
+        highlightLines: "101,103-105",
       }),
     ).toEqual({
       width: 721,
@@ -53,6 +61,14 @@ describe("canvas appearance preferences", () => {
       widthMode: "fixed",
       windowRadius: 18,
       shadow: "strong",
+      windowStyle: "minimal",
+      codePadding: 40,
+      aspectRatio: "16:9",
+      gradientStart: "#123456",
+      gradientEnd: "#abcdef",
+      gradientAngle: 210,
+      startLine: 100,
+      highlightLines: "101,103-105",
     });
   });
   it("restores typography while older preferences receive safe defaults", () => {
