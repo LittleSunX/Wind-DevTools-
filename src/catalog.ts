@@ -4,7 +4,7 @@ export const tools = [
     name: "代码画布",
     category: "创作与分享",
     icon: "⌘",
-    description: "将代码转为精美图片。实时预览，一键导出高清 PNG。",
+    description: "将代码转为精美图片。实时预览，一键导出 PNG / SVG。",
     tags: ["语法高亮", "图片导出"],
     hint: "本地生成图片，不上传代码。",
     example: "",
