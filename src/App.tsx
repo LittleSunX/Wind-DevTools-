@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { categories, tools } from "./catalog";
 import { trackTool } from "./analytics";
 import type { Options } from "./utils/shared";
+import { createCanvasTransfer, writeCanvasTransfer } from "./utils/canvas-transfer";
 const defaultOptions: Options = {
   indent: "2",
   dialect: "mysql",
@@ -199,6 +200,26 @@ export function App({ path = "/tools" }: { path?: string }) {
     a.download = `wind-${current?.id}.${current?.id === "sql" ? "sql" : current?.id === "json" ? "json" : "txt"}`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  function sendToCanvas() {
+    if (!current || !output) return;
+    if (output.length > 12000 || output.split(/\r\n|\r|\n/).length > 160) {
+      setNotice("结果超过代码画布限制（12,000 字符 / 160 行），请精简后再发送。");
+      return;
+    }
+    const payload = createCanvasTransfer(current.id, output);
+    if (!payload) {
+      setNotice("当前结果暂不支持发送到代码画布。");
+      return;
+    }
+    try {
+      writeCanvasTransfer(sessionStorage, payload);
+      trackTool(current.id, "send_to_canvas", "success");
+      window.location.assign("/tools/code-image");
+    } catch {
+      trackTool(current.id, "send_to_canvas", "error");
+      setNotice("无法暂存结果，请检查浏览器存储设置后重试。");
+    }
   }
   const visible = tools.filter(
     (t) =>
@@ -736,6 +757,9 @@ export function App({ path = "/tools" }: { path?: string }) {
                     </button>
                     <button disabled={!output} onClick={download}>
                       下载
+                    </button>
+                    <button disabled={!output} onClick={sendToCanvas}>
+                      发送到代码画布
                     </button>
                   </div>
                   <div className="output-wrap">
