@@ -194,10 +194,15 @@ export const defaults: ImageOptions = {
   gradientEnd: "#b8a2e6",
   gradientAngle: 135,
 };
-export function parseHighlightedLines(value: string, lineCount: number) {
+export function parseHighlightedLines(
+  value: string,
+  startLine: number,
+  lineCount: number,
+) {
   const result = new Set<number>();
   const text = value.trim();
   if (!text) return result;
+  const lastLine = startLine + Math.max(0, lineCount - 1);
   for (const part of text.split(",")) {
     const token = part.trim();
     if (!token) continue;
@@ -207,12 +212,13 @@ export function parseHighlightedLines(value: string, lineCount: number) {
       const end = Number(range[2]);
       if (!Number.isInteger(start) || !Number.isInteger(end) || start < 1 || end < start)
         continue;
-      for (let line = start; line <= Math.min(end, lineCount); line++) result.add(line);
+      for (let line = Math.max(start, startLine); line <= Math.min(end, lastLine); line++)
+        result.add(line);
       continue;
     }
     if (/^\d+$/.test(token)) {
       const line = Number(token);
-      if (line >= 1 && line <= lineCount) result.add(line);
+      if (line >= startLine && line <= lastLine) result.add(line);
     }
   }
   return result;
