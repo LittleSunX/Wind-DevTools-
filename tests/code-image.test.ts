@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { highlightCode } from "../src/utils/code-highlight";
 import {
   splitSegments,
+  imageFilename,
   validateCode,
   languages,
 } from "../src/utils/code-image";
@@ -47,16 +48,22 @@ describe("code image highlighting", () => {
     );
     expect(result.some((s) => s.type === "string")).toBe(true);
   });
-  it("preserves empty lines and normalizes Windows line endings and tabs", () => {
+  it("preserves empty lines and normalizes line endings without changing tabs", () => {
     expect(
       splitSegments([{ text: "a\r\n\r\n\tb\r", type: "comment" }]).map((l) =>
         l.map((s) => s.text).join(""),
       ),
-    ).toEqual(["a", "", "    b", ""]);
+    ).toEqual(["a", "", "\tb", ""]);
   });
   it("rejects empty, oversized and excessively tall input", () => {
     expect(() => validateCode(" ")).toThrow();
     expect(() => validateCode("x".repeat(12001))).toThrow("12,000");
     expect(() => validateCode("a\n".repeat(160))).toThrow("160");
   });
+});
+
+it("creates a sortable local timestamp filename", () => {
+  expect(imageFilename(new Date(2026, 8, 18, 9, 5, 2, 7))).toBe(
+    "wind-code-20260918-090502-007.png",
+  );
 });

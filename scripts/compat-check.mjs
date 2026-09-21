@@ -1,130 +1,130 @@
 import { chromium, firefox, webkit, expect } from "@playwright/test";
 import assert from "node:assert/strict";
-import { readFile, mkdir } from "node:fs/promises";
-const base = process.env.TEST_URL || "http://localhost:4173";
+import { mkdir } from "node:fs/promises";
+import { canvasTools, comparePixels } from "./canvas-test-utils.mjs";
 await mkdir("artifacts", { recursive: true });
-for (const [name, engine, mobile] of [
-  ["chromium", chromium, false],
-  ["firefox", firefox, false],
-  ["webkit", webkit, false],
-  ["webkit-touch", webkit, true],
+const base = process.env.TEST_URL || "http://localhost:4173";
+for (const [name, engine] of [
+  ["chromium", chromium],
+  ["firefox", firefox],
+  ["webkit", webkit],
 ]) {
-  const browser = await engine.launch({ headless: true });
-  const context = await browser.newContext(
-    mobile
-      ? {
-          viewport: { width: 390, height: 844 },
-          hasTouch: true,
-          isMobile: true,
-        }
-      : { viewport: { width: 1366, height: 900 } },
-  );
-  const page = await context.newPage();
+  const browser = await engine.launch();
+  const page = await browser.newPage({
+    viewport: { width: 1440, height: 1200 },
+  });
+  page.setDefaultTimeout(15000);
+  const { download, editor, artwork, close, field, ready, png } =
+    canvasTools(page);
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  page.setDefaultTimeout(15000);
-  const settings = page.getByRole("button", { name: /^外观设置/ });
-  const download = page.getByRole("button", { name: "下载 PNG", exact: true });
   try {
     await page.goto(base + "/tools/code-image");
-    await expect(download).toBeEnabled();
-    await page.locator("#shot-code.cm-content").waitFor();
-    await settings.click();
-    const box = await page.locator(".shot-preview-stage").boundingBox();
-    await page.getByLabel("主题", { exact: true }).selectOption("light");
-    await page.getByLabel("窗口标题", { exact: true }).fill("PRIVATE_TITLE");
+    await ready();
+    await (await field("导出倍率")).selectOption("1");
+    await (await field("字体")).selectOption("source");
+    await (await field("行高")).selectOption("1.4");
+    await close();
+    await editor.fill('const value = "中文 👨‍👩‍👧‍👦";\n\tconsole.log(value);\n');
+    await ready();
     await page
-      .getByRole("button", { name: "关闭外观设置", exact: true })
-      .click();
-    assert.deepEqual(
-      await page.locator(".shot-preview-stage").boundingBox(),
-      box,
+      .locator(".canvas-frame")
+      .evaluate((e) => (e.style.marginLeft = "0"));
+    await editor.evaluate((e) => e.blur());
+    const shot = await artwork.screenshot({
+      path: `artifacts/${name}-artwork.png`,
+    });
+    const exported = await png(`artifacts/${name}-export.png`);
+    const match = await comparePixels(page, shot, exported.bytes);
+    assert.ok(
+      match.sameSize && match.ratio < 0.05,
+      `${name}: ${JSON.stringify(match)}`,
     );
-    await expect(download).toBeEnabled();
-    const previous = await page
-      .locator("canvas")
-      .evaluate((c) => c.toDataURL());
+    await editor.focus();
+    await editor.press("ControlOrMeta+End");
+    await editor.pressSequentially("nativeInput");
+    await expect(editor).toHaveValue(/nativeInput$/);
+    await editor.press("ControlOrMeta+z");
+    await expect(editor).not.toHaveValue(/nativeInput$/);
+    await editor.press("ControlOrMeta+End");
+    await editor.press("Tab");
+    await expect(editor).toHaveValue(/    $/);
+    // Coordinate-based editing must follow the visible text after zooming.
+    await editor.fill("abcdefghij\nsecond line");
+    await ready();
+    await (await field("画布缩放")).selectOption("0.5");
+    const hit = await editor.evaluate((el) => {
+      const style = getComputedStyle(el);
+      const context = document.createElement("canvas").getContext("2d");
+      context.font = `${style.fontSize} ${style.fontFamily}`;
+      const rect = el.getBoundingClientRect();
+      return {
+        x: rect.x + context.measureText("abcde").width * 0.5 + 0.1,
+        y: rect.y + parseFloat(style.lineHeight) * 0.25,
+      };
+    });
+    await page.mouse.click(hit.x, hit.y);
+    assert.equal(await editor.evaluate((el) => el.selectionStart), 5);
+    await editor.pressSequentially("X");
+    await expect(editor).toHaveValue("abcdeXfghij\nsecond line");
+    await (await field("画布缩放")).selectOption("1");
+    await (await field("宽度模式")).selectOption("fixed");
+    await (await field("画布宽度")).selectOption("640");
+    await close();
+    await editor.fill(
+      'const mixed = "' + "中文 emoji 👨‍👩‍👧‍👦 identifier ".repeat(8) + '";',
+    );
+    await ready();
+    const wrapped = await artwork.screenshot();
+    const wrappedExport = await png(`artifacts/${name}-wrapped.png`);
+    const wrappedMatch = await comparePixels(
+      page,
+      wrapped,
+      wrappedExport.bytes,
+    );
+    assert.ok(
+      wrappedMatch.sameSize && wrappedMatch.ratio < 0.05,
+      `${name} wrapped: ${JSON.stringify(wrappedMatch)}`,
+    );
+    // Simulated composition verifies state handling; real OS IME still needs manual acceptance.
+    await editor.dispatchEvent("compositionstart");
+    await editor.fill("中文输入测试");
+    await editor.dispatchEvent("compositionend", { data: "中文输入测试" });
+    await ready();
+    await expect(editor).toHaveValue("中文输入测试");
     await page.route("**/assets/code-image.worker-*.js", (route) =>
       route.fulfill({
         contentType: "text/javascript",
-        body: 'self.onmessage = e => setTimeout(() => self.postMessage({segments:[{text:e.data.code,type:""}]}), 800);',
+        body: 'self.onmessage=e=>setTimeout(()=>self.postMessage({segments:[{text:e.data.code,type:""}]}),800)',
       }),
     );
-    const editor = page.getByLabel("代码", { exact: true });
-    await editor.focus();
-    await editor.press("ControlOrMeta+a");
-    // Firefox's automation fill uses composition events; exercise actual key input here.
-    await editor.pressSequentially('const privateValue = "PRIVATE_SOURCE";');
+    await editor.fill('const privateValue = "PRIVATE_SOURCE";');
     await expect(download).toBeDisabled();
-    await expect(page.locator("canvas")).toBeVisible();
-    assert.equal(
-      await page.locator("canvas").evaluate((c) => c.toDataURL()),
-      previous,
+    await expect(page.locator(".canvas-highlight")).toHaveText(
+      /PRIVATE_SOURCE/,
     );
-    await expect(download).toBeEnabled();
-    assert.notEqual(
-      await page.locator("canvas").evaluate((c) => c.toDataURL()),
-      previous,
-    );
-    await editor.press("ControlOrMeta+a");
-    await editor.evaluate((el) => {
-      const data = new DataTransfer();
-      data.setData("text/plain", 'const 中文 = "👨‍👩‍👧‍👦";');
-      const event = new ClipboardEvent("paste", {
-        bubbles: true,
-        cancelable: true,
-      });
-      // Firefox intentionally clears clipboardData in constructed events.
-      Object.defineProperty(event, "clipboardData", { value: data });
-      el.dispatchEvent(event);
-    });
-    await expect(editor).toHaveText('const 中文 = "👨‍👩‍👧‍👦";');
-    await expect(download).toBeEnabled();
-    const filePromise = page.waitForEvent("download");
-    await download.click();
-    const file = await filePromise;
-    await file.saveAs(`artifacts/${name}.png`);
-    const png = await readFile(`artifacts/${name}.png`);
-    assert.equal(png.subarray(1, 4).toString(), "PNG");
-    await page.getByRole("button", { name: "清空", exact: true }).click();
-    await expect(page.locator("canvas")).toBeHidden();
-    await expect(download).toBeDisabled();
-    const saved = await page.evaluate(() =>
-      JSON.stringify({ ...localStorage, ...sessionStorage }),
-    );
-    assert.ok(!saved.includes("PRIVATE_"));
+    await ready();
     await page.unroute("**/assets/code-image.worker-*.js");
+    await (await field("窗口标题")).fill("PRIVATE_TITLE");
+    await ready();
     await page.reload();
-    await expect(download).toBeEnabled();
-    await settings.click();
-    assert.equal(
-      await page.getByLabel("主题", { exact: true }).inputValue(),
-      "light",
+    await ready();
+    assert.equal(await (await field("字体")).inputValue(), "source");
+    assert.notEqual(
+      await (await field("窗口标题")).inputValue(),
+      "PRIVATE_TITLE",
     );
-    assert.equal(
-      await page.getByLabel("窗口标题", { exact: true }).inputValue(),
-      "hello.ts",
-    );
-    await page
-      .getByRole("button", { name: "恢复默认外观", exact: true })
-      .click();
-    assert.equal(
-      await page.getByLabel("主题", { exact: true }).inputValue(),
-      "night",
-    );
-    await page
-      .getByRole("button", { name: "关闭外观设置", exact: true })
-      .click();
-    await page.getByRole("button", { name: /^语言 ·/ }).click();
-    await page.getByLabel("搜索语言", { exact: true }).fill("rust");
-    await page.getByRole("button", { name: "Rust", exact: true }).click();
-    await expect(download).toBeEnabled();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await (await field("画布缩放")).selectOption("fit");
+    await ready();
     assert.ok(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     );
-    // Copy failure must remain actionable without blocking PNG downloads.
+    await editor.fill('const mobile = "touch";');
+    await ready();
+    await png(`artifacts/${name}-mobile.png`);
     await page.evaluate(() =>
       Object.defineProperty(navigator, "clipboard", {
         value: undefined,
@@ -136,10 +136,10 @@ for (const [name, engine, mobile] of [
       .getByRole("status")
       .filter({ hasText: "请使用「下载 PNG」" })
       .waitFor();
-    await expect(download).toBeEnabled();
+    await ready();
     assert.deepEqual(errors, []);
     console.log(
-      `${name}: preview stability, stale-export prevention, preferences privacy, menus and PNG passed.`,
+      `${name}: visual/export parity, native input/undo, composition events, delayed highlighting, preferences and mobile passed.`,
     );
   } catch (error) {
     await page
@@ -147,7 +147,6 @@ for (const [name, engine, mobile] of [
       .catch(() => {});
     throw error;
   } finally {
-    await context.close();
     await browser.close();
   }
 }

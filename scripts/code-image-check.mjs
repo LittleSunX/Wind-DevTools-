@@ -1,289 +1,251 @@
-import { chromium } from "@playwright/test";
+import { chromium, expect } from "@playwright/test";
 import assert from "node:assert/strict";
-import { mkdir, readFile } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
+import { canvasTools, comparePixels, pixelAt } from "./canvas-test-utils.mjs";
 const browser = await chromium.launch({
   channel: process.env.PW_CHANNEL === "bundled" ? undefined : "chrome",
-  headless: true,
 });
-const base = process.argv[2] || "http://localhost:4173";
 const context = await browser.newContext({
-  viewport: { width: 1440, height: 1050 },
+  viewport: { width: 1440, height: 1200 },
   permissions: ["clipboard-read", "clipboard-write"],
 });
 const page = await context.newPage();
-page.setDefaultTimeout(10000);
+page.setDefaultTimeout(15000);
+const base = process.env.TEST_URL || "http://localhost:4173";
+const {
+  download,
+  editor,
+  artwork,
+  close,
+  field,
+  ready,
+  language,
+  png,
+  dimensions,
+} = canvasTools(page);
 const errors = [],
   requests = [];
-page.on("pageerror", (e) => errors.push(e.message));
-page.on("request", (r) => requests.push(r.url() + " " + (r.postData() || "")));
-const downloadButton = page.getByRole("button", {
-  name: "下载 PNG",
-  exact: true,
-});
-async function closePanels() {
-  await page.evaluate(() =>
-    document
-      .querySelectorAll(":popover-open")
-      .forEach((el) => el.hidePopover()),
-  );
-}
-async function field(label) {
-  if (["代码", "预览缩放", "导出倍率", "风格"].includes(label)) {
-    await closePanels();
-  } else if (label === "搜索语言") {
-    if (!(await page.getByRole("dialog", { name: "选择语言" }).isVisible()))
-      await page.getByRole("button", { name: /^语言 ·/ }).click();
-  } else if (
-    !(await page
-      .getByRole("dialog", { name: "外观设置", exact: true })
-      .isVisible())
-  ) {
-    await page
-      .getByRole("button", { name: "外观设置", exact: false })
-      .filter({ hasText: "⌄" })
-      .click();
-  }
-  return page.getByLabel(label, { exact: true });
-}
-async function chooseLanguage(id) {
-  await field("搜索语言");
-  await page
-    .getByRole("dialog", { name: "选择语言" })
-    .locator(`button[value="${id}"]`)
-    .click();
-}
-async function ready() {
-  await downloadButton.waitFor();
-  await page.waitForFunction(
-    () =>
-      !Array.from(document.querySelectorAll("button")).find((b) =>
-        b.textContent.includes("下载 PNG"),
-      )?.disabled,
-  );
-}
+page.on("pageerror", (error) => errors.push(error.message));
+page.on("request", (request) =>
+  requests.push(request.url() + " " + (request.postData() || "")),
+);
+await mkdir("artifacts", { recursive: true });
 try {
-  await mkdir("artifacts", { recursive: true });
-  const response = await page.goto(base + "/tools/code-image");
-  assert.equal(response.status(), 200);
-  assert.ok((await response.text()).includes("代码画布"));
-  await ready();
-  await page.locator("#shot-code.cm-content").waitFor();
-  const editorBefore = await page.locator(".shot-controls").boundingBox();
-  const previewBefore = await page.locator(".shot-preview-stage").boundingBox();
-  await field("主题");
-  assert.deepEqual(
-    await page.locator(".shot-controls").boundingBox(),
-    editorBefore,
-  );
-  assert.deepEqual(
-    await page.locator(".shot-preview-stage").boundingBox(),
-    previewBefore,
-  );
-  await page.keyboard.press("Escape");
-  assert.equal(await page.locator(":popover-open").count(), 0);
-  const initial = await page
-    .locator("canvas")
-    .evaluate((c) => ({ w: c.width, h: c.height }));
-  assert.ok(initial.w > 800 && initial.h > 600);
-  await page.screenshot({
-    path: "artifacts/code-image-desktop.png",
-    fullPage: true,
-  });
-  const dp = page.waitForEvent("download");
-  await downloadButton.click();
-  const download = await dp;
-  assert.match(
-    download.suggestedFilename(),
-    /^wind-code-\d{8}-\d{6}-\d{3}\.png$/,
-  );
-  await download.saveAs("artifacts/code-image-export.png");
-  const png = await readFile("artifacts/code-image-export.png");
-  assert.equal(png.subarray(1, 4).toString(), "PNG");
-  assert.equal(png.readUInt32BE(16), initial.w);
-  assert.equal(png.readUInt32BE(20), initial.h);
-  await (await field("导出倍率")).selectOption("1");
+  await page.goto(base + "/tools/code-image");
   await ready();
   assert.equal(
-    await page.locator("canvas").evaluate((c) => c.width),
-    initial.w / 2,
+    await page.locator(".shot-layout, .shot-preview-stage").count(),
+    0,
+  );
+  await (await field("导出倍率")).selectOption("1");
+  await ready();
+  // Use an integer origin for raster comparison; small glyph antialias differences are allowed.
+  await page
+    .locator(".canvas-frame")
+    .evaluate((el) => (el.style.marginLeft = "0"));
+  const screenshot = await artwork.screenshot({
+    path: "artifacts/canvas-artwork.png",
+  });
+  const first = await png("artifacts/canvas-artwork-export.png");
+  assert.match(first.name, /^wind-code-\d{8}-\d{6}-\d{3}\.png$/);
+  const match = await comparePixels(page, screenshot, first.bytes);
+  assert.ok(match.sameSize && match.ratio < 0.04, JSON.stringify(match));
+  const original = await dimensions();
+  await (await field("画布缩放")).selectOption("0.5");
+  await ready();
+  const zoomed = await png("artifacts/canvas-zoom-export.png");
+  assert.ok(
+    (await comparePixels(page, first.bytes, zoomed.bytes)).ratio < 0.001,
+  );
+  await (await field("画布缩放")).selectOption("1");
+  await (await field("导出倍率")).selectOption("3");
+  await ready();
+  const scaled = await png("artifacts/canvas-3x.png");
+  assert.equal(scaled.bytes.readUInt32BE(16), original.w * 3);
+  assert.equal(scaled.bytes.readUInt32BE(20), original.h * 3);
+  await (await field("导出倍率")).selectOption("1");
+  await editor.fill(
+    'const 中文 = "👨‍👩‍👧‍👦 <script>alert(1)</script>";\n\tconst token = "PRIVATE_SOURCE_47219";\n',
+  );
+  await ready();
+  assert.equal(await page.locator(".canvas-source-row").count(), 3);
+  await editor.focus();
+  await editor.press("ControlOrMeta+End");
+  await editor.press("Tab");
+  await expect(editor).toHaveValue(/\n    $/);
+  await editor.press("ControlOrMeta+z");
+  await expect(editor).toHaveValue(/;\n$/);
+  await editor.press("ControlOrMeta+f");
+  await page.getByLabel("查找内容", { exact: true }).fill("中文");
+  await page.getByRole("button", { name: "下一个", exact: true }).click();
+  assert.equal(
+    await editor.evaluate((e) =>
+      e.value.slice(e.selectionStart, e.selectionEnd),
+    ),
+    "中文",
+  );
+  await page.getByRole("button", { name: "关闭查找", exact: true }).click();
+  await (await field("窗口标题")).fill("PRIVATE_TITLE");
+  await ready();
+  // Export with active selection and active title editing matches the clean artwork.
+  const titleExport = await png("artifacts/canvas-title.png");
+  await editor.focus();
+  await editor.press("ControlOrMeta+a");
+  const selectedExport = await png("artifacts/canvas-selected.png");
+  assert.ok(
+    (await comparePixels(page, titleExport.bytes, selectedExport.bytes)).ratio <
+      0.001,
+  );
+  await page.getByRole("button", { name: "复制图片", exact: true }).click();
+  await page.getByRole("status").filter({ hasText: "图片已复制" }).waitFor();
+  assert.ok(
+    await page.evaluate(async () =>
+      (await navigator.clipboard.read())[0].types.includes("image/png"),
+    ),
   );
   await (await field("背景")).selectOption("transparent");
   await ready();
-  assert.equal(
-    await page
-      .locator("canvas")
-      .evaluate((c) => c.getContext("2d").getImageData(0, 0, 1, 1).data[3]),
-    0,
-  );
+  const transparent = await png("artifacts/canvas-transparent.png");
+  assert.equal((await pixelAt(page, transparent.bytes, 0, 0))[3], 0);
   await (await field("背景")).selectOption("solid");
   await (await field("背景颜色")).fill("#ff0000");
   await ready();
   assert.deepEqual(
-    await page
-      .locator("canvas")
-      .evaluate((c) =>
-        Array.from(c.getContext("2d").getImageData(0, 0, 1, 1).data),
-      ),
+    await pixelAt(page, (await png("artifacts/canvas-solid.png")).bytes, 0, 0),
     [255, 0, 0, 255],
   );
-  await (await field("主题")).selectOption("light");
-  await (await field("显示行号")).uncheck();
-  await (await field("窗口标题栏")).uncheck();
-  await ready();
-  await (await field("搜索语言")).fill("rust");
-  await chooseLanguage("rust");
-  await (await field("代码")).fill('fn main() { println!("Hello"); }');
-  await ready();
-  assert.ok((await page.locator("#shot-code .shot-token-keyword").count()) > 0);
-  await (await field("搜索语言")).fill("");
-  assert.equal(await page.locator(".shot-language-list button").count(), 28);
-  await (await field("风格")).selectOption("暖日落");
-  await ready();
-  assert.equal(await (await field("主题")).inputValue(), "graphite");
-  const beforeZoom = await page
-    .locator("canvas")
-    .evaluate((c) => [c.width, c.height]);
-  await (await field("预览缩放")).selectOption("1.5");
-  assert.deepEqual(
-    await page.locator("canvas").evaluate((c) => [c.width, c.height]),
-    beforeZoom,
-  );
-  await (await field("预览缩放")).selectOption("fit");
-  await chooseLanguage("typescript");
-  const marker = "PRIVATE_CODE_47219";
-  await (
-    await field("代码")
-  ).fill(`const token = "${marker}";\n// 中文测试 <script>alert(1)</script>`);
-  await ready();
-  await page.getByRole("button", { name: "复制图片", exact: true }).click();
-  await page.getByRole("status").filter({ hasText: "图片已复制" }).waitFor();
-  const copied = await page.evaluate(async () => {
-    const items = await navigator.clipboard.read();
-    const blob = await items[0].getType("image/png");
-    const img = await createImageBitmap(blob);
-    return { w: img.width, h: img.height };
-  });
-  assert.deepEqual(
-    copied,
-    await page.locator("canvas").evaluate((c) => ({ w: c.width, h: c.height })),
-  );
-  assert.ok(requests.every((r) => !r.includes(marker)));
-  assert.ok(requests.every((r) => r.startsWith(base)));
-  const saved = await page.evaluate(() =>
-    JSON.stringify({ ...localStorage, ...sessionStorage }),
-  );
-  assert.ok(!saved.includes(marker));
-  assert.deepEqual(await page.evaluate(() => Object.keys(localStorage)), [
-    "wind.canvas.preferences.v1",
-  ]);
-  await closePanels();
-  await page.getByRole("button", { name: "清空", exact: true }).click();
-  await page.getByRole("alert").waitFor();
-  assert.ok(await downloadButton.isDisabled());
-  await (await field("代码")).fill("x".repeat(12001));
-  await page.getByRole("alert").filter({ hasText: "12,000" }).waitFor();
-  await (await field("代码")).fill("x".repeat(600));
-  await chooseLanguage("plain");
-  await page.getByRole("alert").filter({ hasText: "单行" }).waitFor();
-  assert.ok(await downloadButton.isDisabled());
-  // Long lines wrap only in the image; fixed width includes padding and scales exactly.
   await (await field("宽度模式")).selectOption("fixed");
   await (await field("画布宽度")).selectOption("640");
-  await (await field("导出倍率")).selectOption("2");
+  const long =
+    'const identifier = "' +
+    "中文 👨‍👩‍👧‍👦 longIdentifier ".repeat(12) +
+    '";\n\treturn identifier;';
+  await close();
+  await editor.fill(long);
   await ready();
-  assert.equal(await page.locator("canvas").evaluate((c) => c.width), 1280);
-  assert.equal(await (await field("代码")).textContent(), "x".repeat(600));
-  const fixedDownload = page.waitForEvent("download");
-  await downloadButton.click();
-  const fixedFile = await fixedDownload;
-  await fixedFile.saveAs("artifacts/code-image-wrapped.png");
-  assert.equal(
-    (await readFile("artifacts/code-image-wrapped.png")).readUInt32BE(16),
-    1280,
+  assert.equal((await dimensions()).w, 640);
+  assert.equal(await editor.inputValue(), long);
+  const geometry = await editor.evaluate((e) => ({
+    height: e.clientHeight,
+    scroll: e.scrollHeight,
+  }));
+  assert.ok(
+    Math.abs(geometry.height - geometry.scroll) <= 1,
+    JSON.stringify(geometry),
   );
   await (await field("长行自动换行")).uncheck();
-  await page.getByRole("alert").filter({ hasText: "第 1 行" }).waitFor();
-  assert.ok(await downloadButton.isDisabled());
+  await expect(download).toBeDisabled();
+  await page.getByRole("alert").filter({ hasText: "超出指定宽度" }).waitFor();
   await (await field("长行自动换行")).check();
   await ready();
   await (await field("画布宽度")).selectOption("custom");
   for (const value of ["", "319", "2401", "640.5"]) {
     await (await field("自定义宽度")).fill(value);
+    await expect(download).toBeDisabled();
     await page.getByRole("alert").filter({ hasText: "320–2400" }).waitFor();
-    assert.ok(await downloadButton.isDisabled());
   }
-  await (await field("自定义宽度")).fill("721");
+  await (await field("自定义宽度")).fill("800");
   await ready();
-  assert.equal(await page.locator("canvas").evaluate((c) => c.width), 1442);
-  await (await field("自定义宽度")).fill("320");
-  await (await field("代码")).fill("W".repeat(12000));
-  await page.getByRole("alert").filter({ hasText: "图片尺寸过大" }).waitFor();
-  assert.ok(await downloadButton.isDisabled());
-  await (await field("代码")).fill("恢复正常");
+  await (await field("字体")).selectOption("source");
   await ready();
-  await (await field("宽度模式")).selectOption("auto");
+  assert.ok(
+    await page.evaluate(() =>
+      document.fonts.check('18px "Wind Source Code Pro"'),
+    ),
+  );
+  await (await field("行高")).selectOption("1.4");
   await ready();
+  const compact = (await dimensions()).h;
+  await (await field("行高")).selectOption("1.9");
+  await ready();
+  assert.ok((await dimensions()).h > compact);
+  await close();
+  await editor.fill(
+    Array.from({ length: 100 }, (_, i) => `const line${i} = "中文 ${i}";`).join(
+      "\n",
+    ),
+  );
+  await ready();
+  assert.equal(await page.locator(".canvas-source-row").count(), 100);
+  assert.ok((await dimensions()).h > 3000);
+  const tall = await png("artifacts/canvas-long.png");
+  assert.equal(tall.bytes.readUInt32BE(20), (await dimensions()).h);
+  await editor.fill("x".repeat(12001));
+  await page.getByRole("alert").filter({ hasText: "12,000" }).waitFor();
+  await expect(download).toBeDisabled();
+  await editor.fill("x\n".repeat(161));
+  await page.getByRole("alert").filter({ hasText: "160 行" }).waitFor();
+  await editor.fill("");
+  await expect(download).toBeDisabled();
+  await page.getByRole("button", { name: "加载示例", exact: true }).click();
+  await ready();
+  const before = await editor.inputValue();
+  await language("java");
+  await ready();
+  assert.equal(await editor.inputValue(), before);
+  await page.getByRole("button", { name: "加载示例", exact: true }).click();
+  await page.getByRole("button", { name: "取消", exact: true }).click();
+  assert.equal(await editor.inputValue(), before);
+  await page.getByRole("button", { name: "加载示例", exact: true }).click();
+  await page.getByRole("button", { name: "替换", exact: true }).click();
+  await ready();
+  assert.match(await editor.inputValue(), /public class Welcome/);
+  assert.ok(
+    requests.every(
+      (request) => request.startsWith(base) && !request.includes("PRIVATE_"),
+    ),
+  );
+  assert.ok(
+    !(await page.evaluate(() =>
+      JSON.stringify({ ...localStorage, ...sessionStorage }).includes(
+        "PRIVATE_",
+      ),
+    )),
+  );
   await page.reload();
   await ready();
-  assert.ok(!(await (await field("代码")).innerText()).includes(marker));
+  assert.equal(await (await field("字体")).inputValue(), "source");
+  assert.equal(await (await field("行高")).inputValue(), "1.9");
+  assert.notEqual(
+    await (await field("窗口标题")).inputValue(),
+    "PRIVATE_TITLE",
+  );
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.screenshot({
-    path: "artifacts/code-image-mobile.png",
-    fullPage: true,
-  });
+  await (await field("画布缩放")).selectOption("fit");
+  await ready();
   assert.ok(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   );
+  await page.screenshot({
+    path: "artifacts/canvas-mobile.png",
+    fullPage: true,
+  });
   await field("主题");
   const sheet = await page
     .getByRole("dialog", { name: "外观设置", exact: true })
     .boundingBox();
-  assert.ok(
-    Math.abs(sheet.y + sheet.height - 844) < 2,
-    "mobile settings attach to bottom",
-  );
-  await page.getByRole("button", { name: "关闭外观设置", exact: true }).click();
-  // Choosing a language preserves code; only explicit sample loading replaces it.
-  await page.setViewportSize({ width: 1440, height: 1050 });
-  await chooseLanguage("python");
-  const beforeLanguageChange = await (await field("代码")).innerText();
-  await chooseLanguage("java");
-  await ready();
-  assert.equal(await (await field("代码")).innerText(), beforeLanguageChange);
-  await page.getByRole("button", { name: "加载示例", exact: true }).click();
-  await page.getByRole("button", { name: "取消", exact: true }).click();
-  assert.equal(await (await field("代码")).innerText(), beforeLanguageChange);
-  await page.getByRole("button", { name: "加载示例", exact: true }).click();
-  await page.getByRole("button", { name: "替换", exact: true }).click();
-  await ready();
-  assert.ok(
-    (await (await field("代码")).innerText()).includes("public class Welcome"),
-  );
-  await chooseLanguage("go");
-  assert.ok(
-    (await (await field("代码")).innerText()).includes("public class Welcome"),
-  );
-  await page.getByRole("button", { name: "清空", exact: true }).click();
-  await page.getByRole("button", { name: "加载示例", exact: true }).click();
-  await ready();
-  assert.ok((await (await field("代码")).innerText()).includes("package main"));
-  for (const [id, snippet] of [
-    ["vue", "<script setup>"],
-    ["tsx", "type WelcomeProps"],
-    ["powershell", "$tools ="],
-  ]) {
-    await chooseLanguage(id);
-    await page.getByRole("button", { name: "加载示例", exact: true }).click();
-    await page.getByRole("button", { name: "替换", exact: true }).click();
-    await ready();
-    assert.ok((await (await field("代码")).innerText()).includes(snippet));
-  }
+  assert.ok(Math.abs(sheet.y + sheet.height - 844) < 2);
+  const failed = await context.newPage();
+  await failed.route("**/fonts/*.woff2", (route) => route.abort());
+  await failed.goto(base + "/tools/code-image");
+  await failed.getByRole("alert").filter({ hasText: "字体加载失败" }).waitFor();
+  await failed.getByRole("button", { name: /^外观设置/ }).click();
+  await failed.getByLabel("字体", { exact: true }).selectOption("system");
+  await expect(
+    failed.getByRole("button", { name: "下载 PNG", exact: true }),
+  ).toBeEnabled();
+  await failed.close();
   assert.deepEqual(errors, []);
   console.log(
-    "Code image checks passed: live preview, PNG bytes/dimensions, scaling, alpha, colors, clipboard, limits, privacy and mobile.",
+    "Canvas checks passed: DOM/PNG parity, zoom, scale, input/undo/find, selection exclusion, clipboard, wrapping, long export, privacy and mobile.",
   );
+} catch (error) {
+  await page
+    .screenshot({ path: "artifacts/canvas-failure.png", fullPage: true })
+    .catch(() => {});
+  throw error;
 } finally {
   await browser.close();
 }

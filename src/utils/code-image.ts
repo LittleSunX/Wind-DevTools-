@@ -1,10 +1,11 @@
-import { layoutCodeLines } from "./code-layout";
 export type Segment = { text: string; type: string };
 export type ImageOptions = {
   theme: string;
   background: string;
   color: string;
   fontSize: number;
+  fontFamily: string;
+  lineHeight: number;
   padding: number;
   scale: number;
   lineNumbers: boolean;
@@ -14,6 +15,34 @@ export type ImageOptions = {
   width: number;
   wrap: boolean;
 };
+export const canvasFonts = [
+  {
+    id: "jetbrains",
+    name: "JetBrains Mono",
+    family: "Wind JetBrains Mono",
+    file: "JetBrainsMono-Regular.woff2",
+  },
+  {
+    id: "source",
+    name: "Source Code Pro",
+    family: "Wind Source Code Pro",
+    file: "SourceCodePro-Regular.woff2",
+  },
+  {
+    id: "system",
+    name: "系统等宽",
+    family: 'Consolas, "SFMono-Regular", "Liberation Mono"',
+    file: "",
+  },
+];
+export function canvasFont(
+  options: Pick<ImageOptions, "fontFamily" | "fontSize">,
+) {
+  const face =
+    canvasFonts.find((font) => font.id === options.fontFamily) ??
+    canvasFonts[0];
+  return `${options.fontSize}px ${face.file ? `"${face.family}"` : face.family}, "Microsoft YaHei", "PingFang SC", monospace`;
+}
 export const sampleCode = `// 让代码，也有好看的表达。
 interface Developer {
   name: string;
@@ -106,12 +135,36 @@ export const imagePresets = [
     padding: 32,
     fontSize: 18,
   },
+  {
+    name: "静谧松林",
+    theme: "forest",
+    background: "slate",
+    padding: 48,
+    fontSize: 18,
+  },
+  {
+    name: "暖纸手记",
+    theme: "paper",
+    background: "solid",
+    padding: 48,
+    fontSize: 18,
+    color: "#e7dfd1",
+  },
+];
+export const themeChoices = [
+  ["night", "午夜蓝"],
+  ["graphite", "石墨黑"],
+  ["light", "明亮"],
+  ["forest", "松林"],
+  ["paper", "暖纸"],
 ];
 export const defaults: ImageOptions = {
   theme: "night",
   background: "blue",
   color: "#5269d8",
   fontSize: 18,
+  fontFamily: "jetbrains",
+  lineHeight: 1.65,
   padding: 48,
   scale: 2,
   lineNumbers: true,
@@ -131,10 +184,7 @@ export function validateCode(code: string) {
 export function splitSegments(segments: Segment[]): Segment[][] {
   const lines: Segment[][] = [[]];
   for (const seg of segments) {
-    const parts = seg.text
-      .replace(/\r\n?/g, "\n")
-      .replace(/\t/g, "    ")
-      .split("\n");
+    const parts = seg.text.replace(/\r\n?/g, "\n").split("\n");
     parts.forEach((text, i) => {
       if (i) lines.push([]);
       if (text) lines[lines.length - 1].push({ text, type: seg.type });
@@ -142,7 +192,7 @@ export function splitSegments(segments: Segment[]): Segment[][] {
   }
   return lines;
 }
-const themes: Record<
+export const themes: Record<
   string,
   { bg: string; text: string; muted: string; colors: Record<string, string> }
 > = {
@@ -182,6 +232,42 @@ const themes: Record<
       tag: "#a83d62",
     },
   },
+  forest: {
+    bg: "#182b28",
+    text: "#deebe3",
+    muted: "#92aaa0",
+    colors: {
+      keyword: "#c5b4eb",
+      string: "#b8d9a4",
+      comment: "#91aa9c",
+      number: "#efbd91",
+      boolean: "#efbd91",
+      function: "#a4d7cf",
+      operator: "#e2cf9d",
+      punctuation: "#b0c4ba",
+      "class-name": "#e2cf9d",
+      property: "#a4d7cf",
+      tag: "#deb0bc",
+    },
+  },
+  paper: {
+    bg: "#faf6ed",
+    text: "#423c35",
+    muted: "#857766",
+    colors: {
+      keyword: "#87528d",
+      string: "#526d36",
+      comment: "#82766a",
+      number: "#a05b2c",
+      boolean: "#a05b2c",
+      function: "#356979",
+      operator: "#8a5940",
+      punctuation: "#786b5d",
+      "class-name": "#916619",
+      property: "#356979",
+      tag: "#a34e56",
+    },
+  },
   graphite: {
     bg: "#202124",
     text: "#e5e5e7",
@@ -201,132 +287,6 @@ const themes: Record<
     },
   },
 };
-export function drawCode(
-  canvas: HTMLCanvasElement,
-  segments: Segment[],
-  o: ImageOptions,
-) {
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("当前浏览器无法创建图片。");
-  const lines = splitSegments(segments);
-  const font = `${o.fontSize}px Consolas, "SFMono-Regular", "Liberation Mono", monospace`;
-  ctx.font = font;
-  const gutter = o.lineNumbers
-    ? ctx.measureText(String(lines.length)).width + 24
-    : 0;
-  const content = Math.max(
-    ...lines.map((line) =>
-      line.reduce(
-        (sum, segment) => sum + ctx.measureText(segment.text).width,
-        0,
-      ),
-    ),
-  );
-  if (
-    o.widthMode === "fixed" &&
-    (!Number.isInteger(o.width) || o.width < 320 || o.width > 2400)
-  )
-    throw new Error("画布宽度请输入 320–2400 之间的整数（px）。");
-  const panelWidth =
-    o.widthMode === "fixed"
-      ? o.width - o.padding * 2
-      : Math.max(420, Math.ceil(content + gutter + 56));
-  const rows = layoutCodeLines(
-    lines,
-    panelWidth - gutter - 56,
-    o.widthMode === "fixed" && o.wrap,
-    (text) => ctx.measureText(text).width,
-  );
-  const lineHeight = Math.ceil(o.fontSize * 1.65);
-  const header = o.windowBar ? 48 : 0;
-  const panelHeight = header + 48 + rows.length * lineHeight;
-  const width = panelWidth + o.padding * 2,
-    height = panelHeight + o.padding * 2;
-  if (width > 2400)
-    throw new Error("单行代码太长，请使用指定宽度并开启长行换行，或缩小字号。");
-  if (width * height * o.scale * o.scale > 16000000 || height * o.scale > 12000)
-    throw new Error("图片尺寸过大，请减少代码、字号、外边距或导出倍率。");
-  canvas.width = width * o.scale;
-  canvas.height = height * o.scale;
-  ctx.scale(o.scale, o.scale);
-  if (o.background !== "transparent") {
-    if (o.background === "solid") {
-      ctx.fillStyle = o.color;
-    } else {
-      const gradient = ctx.createLinearGradient(0, 0, width, height);
-      const stops =
-        o.background === "sunset"
-          ? ["#f4b8a5", "#ba9cdf"]
-          : o.background === "slate"
-            ? ["#dce3ef", "#a8b8d0"]
-            : ["#8ea9ef", "#b8a2e6"];
-      gradient.addColorStop(0, stops[0]);
-      gradient.addColorStop(1, stops[1]);
-      ctx.fillStyle = gradient;
-    }
-    ctx.fillRect(0, 0, width, height);
-  }
-  const t = themes[o.theme] || themes.night;
-  ctx.save();
-  ctx.shadowColor = "#17203a33";
-  ctx.shadowBlur = 24;
-  ctx.shadowOffsetY = 10;
-  ctx.fillStyle = t.bg;
-  ctx.beginPath();
-  ctx.roundRect(o.padding, o.padding, panelWidth, panelHeight, 12);
-  ctx.fill();
-  ctx.restore();
-  if (o.windowBar) {
-    ["#ff6058", "#ffbd2e", "#28c840"].forEach((color, i) => {
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.arc(o.padding + 22 + i * 18, o.padding + 24, 5, 0, Math.PI * 2);
-      ctx.fill();
-    });
-    ctx.fillStyle = t.muted;
-    ctx.font = "12px sans-serif";
-    let title = o.title;
-    while (title && ctx.measureText(title).width > panelWidth - 180)
-      title = title.slice(0, -1);
-    if (title !== o.title) title += "…";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(title, o.padding + panelWidth / 2, o.padding + 24);
-    ctx.textAlign = "left";
-  }
-  ctx.font = font;
-  ctx.textBaseline = "top";
-  rows.forEach((row, i) => {
-    const y = o.padding + header + 24 + i * lineHeight;
-    let x = o.padding + 28;
-    if (o.lineNumbers) {
-      ctx.fillStyle = t.muted;
-      ctx.textAlign = "right";
-      if (row.lineNumber !== null)
-        ctx.fillText(String(row.lineNumber), x + gutter - 24, y);
-      ctx.textAlign = "left";
-      x += gutter;
-    }
-    for (const seg of row.segments) {
-      ctx.fillStyle = t.colors[seg.type] || t.text;
-      ctx.fillText(seg.text, x, y);
-      x += ctx.measureText(seg.text).width;
-    }
-  });
-  return { width: canvas.width, height: canvas.height };
-}
-export function canvasBlob(canvas: HTMLCanvasElement): Promise<Blob> {
-  return new Promise((resolve, reject) =>
-    canvas.toBlob(
-      (blob) =>
-        blob
-          ? resolve(blob)
-          : reject(new Error("图片生成失败，请降低导出倍率。")),
-      "image/png",
-    ),
-  );
-}
-
 export function imageFilename(date = new Date()) {
   const pad = (value: number, length = 2) =>
     String(value).padStart(length, "0");

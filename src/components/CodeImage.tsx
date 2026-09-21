@@ -1,58 +1,69 @@
-import { sampleForLanguage } from "../utils/code-samples";
-import CanvasSettings from "./CanvasSettings";
-import { readPreferences, writePreferences } from "../utils/canvas-preferences";
-import CanvasPopover from "./CanvasPopover";
-import CodeEditor from "./CodeEditor";
-import { trackTool } from "../analytics";
-import { useEffect, useRef, useState } from "react";
 import {
-  canvasBlob,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
+import CanvasSettings from "./CanvasSettings";
+import CanvasPopover from "./CanvasPopover";
+import CanvasCode from "./CanvasCode";
+import { loadCanvasFont } from "../utils/canvas-fonts";
+import { exportCanvas } from "../utils/canvas-export";
+import { readPreferences, writePreferences } from "../utils/canvas-preferences";
+import { sampleForLanguage } from "../utils/code-samples";
+import { trackTool } from "../analytics";
+import {
+  canvasFont,
   defaults,
-  drawCode,
-  languages,
-  languageGroups,
+  themes,
   imagePresets,
   imageFilename,
   sampleCode,
   validateCode,
+  languages,
+  languageGroups,
   type ImageOptions,
   type Segment,
 } from "../utils/code-image";
 
 export default function CodeImage() {
-  const [code, setCode] = useState(sampleCode),
-    [language, setLanguage] = useState("typescript"),
-    [options, setOptions] = useState<ImageOptions>(defaults);
+  const [code, setCode] = useState(sampleCode);
+  const [language, setLanguage] = useState("typescript");
+  const [options, setOptions] = useState<ImageOptions>(defaults);
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [tokens, setTokens] = useState<{
     code: string;
     language: string;
     segments: Segment[];
   } | null>(null);
-  const [error, setError] = useState(""),
-    [notice, setNotice] = useState(""),
-    [ready, setReady] = useState(false),
-    [exporting, setExporting] = useState(false),
-    [replace, setReplace] = useState(false);
+  const [highlightError, setHighlightError] = useState("");
+  const [fontError, setFontError] = useState("");
+  const [fontReady, setFontReady] = useState("");
+  const [notice, setNotice] = useState("");
+  const [exporting, setExporting] = useState(false);
+  const [replace, setReplace] = useState(false);
   const [languageSearch, setLanguageSearch] = useState("");
-  const [zoom, setZoom] = useState("fit");
-  const [size, setSize] = useState({ width: 0, height: 0, scale: 2 });
-  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
-  const rendered = useRef<{
-    code: string;
-    language: string;
-    options: ImageOptions;
-  } | null>(null);
-  const canExport =
-    ready &&
-    rendered.current?.code === code &&
-    rendered.current?.language === language &&
-    rendered.current?.options === options;
-  const hasPreview = size.width > 0 && code.trim().length > 0;
+  const [zoom, setZoom] = useState("1");
+  const artwork = useRef<HTMLDivElement>(null);
+  const stage = useRef<HTMLDivElement>(null);
+  const [available, setAvailable] = useState(1000);
+  const [autoWidth, setAutoWidth] = useState(720);
+  const [size, setSize] = useState({
+    width: 0,
+    height: 0,
+    overflow: false,
+    code: "",
+    options: defaults,
+  });
+  const theme = themes[options.theme] || themes.night;
+  const highlighted = tokens?.code === code && tokens.language === language;
+  const segments = highlighted ? tokens.segments : [{ text: code, type: "" }];
   useEffect(() => {
     try {
       setOptions(readPreferences(localStorage));
     } catch {
-      /* Private storage may be unavailable. */
+      /* Optional storage. */
     }
     setPreferencesLoaded(true);
   }, []);
@@ -61,22 +72,40 @@ export default function CodeImage() {
       try {
         writePreferences(localStorage, options);
       } catch {
-        /* Keep tools usable without storage. */
+        /* Optional storage. */
       }
     }
   }, [options, preferencesLoaded]);
-  const canvas = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
-    setTokens(null);
-    setReady(false);
-    setError("");
-    setNotice("");
+    let cancelled = false;
+    setFontReady("");
+    setFontError("");
+    loadCanvasFont(options.fontFamily)
+      .then(() => {
+        if (!cancelled) setFontReady(options.fontFamily);
+      })
+      .catch((error) => {
+        if (!cancelled) setFontError(error.message);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [options.fontFamily]);
+  useEffect(() => {
+    if (!stage.current) return;
+    const observer = new ResizeObserver((entries) =>
+      setAvailable(entries[0].contentRect.width),
+    );
+    observer.observe(stage.current);
+    return () => observer.disconnect();
+  }, []);
+  useEffect(() => {
+    setHighlightError("");
     let worker: Worker | undefined;
     let timeout: ReturnType<typeof setTimeout> | undefined;
     try {
       validateCode(code);
-    } catch (e) {
-      setError((e as Error).message);
+    } catch {
       return;
     }
     const debounce = setTimeout(() => {
@@ -85,79 +114,141 @@ export default function CodeImage() {
           new URL("../code-image.worker.ts", import.meta.url),
           { type: "module" },
         );
-        worker.onmessage = (e) => {
+        worker.onmessage = (event) => {
           clearTimeout(timeout);
           worker?.terminate();
-          if (e.data.error) setError(e.data.error);
-          else setTokens({ code, language, segments: e.data.segments });
+          if (event.data.error) setHighlightError(event.data.error);
+          else setTokens({ code, language, segments: event.data.segments });
         };
         worker.onerror = () => {
           clearTimeout(timeout);
           worker?.terminate();
-          setError("语法高亮失败，请尝试纯文本模式。");
+          setHighlightError("语法高亮失败，请尝试纯文本模式。");
         };
         worker.postMessage({ code, language });
         timeout = setTimeout(() => {
           worker?.terminate();
-          setError("高亮超过 3 秒，已停止。请精简代码或使用纯文本模式。");
+          setHighlightError("高亮超过 3 秒，请精简代码或使用纯文本模式。");
         }, 3000);
       } catch {
-        setError("无法启动语法高亮，请检查浏览器设置。");
+        setHighlightError("无法启动语法高亮，请检查浏览器设置。");
       }
-    }, 180);
+    }, 120);
     return () => {
       clearTimeout(debounce);
       clearTimeout(timeout);
       worker?.terminate();
     };
   }, [code, language]);
-  useEffect(() => {
-    setReady(false);
-    if (
-      !tokens ||
-      tokens.code !== code ||
-      tokens.language !== language ||
-      !canvas.current
-    )
-      return;
-    try {
-      const buffer = document.createElement("canvas");
-      const dimensions = drawCode(buffer, tokens.segments, options);
-      const context = canvas.current.getContext("2d");
-      if (!context) throw new Error("当前浏览器无法创建图片。");
-      canvas.current.width = buffer.width;
-      canvas.current.height = buffer.height;
-      context.drawImage(buffer, 0, 0);
-      rendered.current = { code, language, options };
-      setSize({ ...dimensions, scale: options.scale });
-      setError("");
-      setReady(true);
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  }, [tokens, code, language, options]);
+  useLayoutEffect(() => {
+    const node = artwork.current;
+    if (!node) return;
+    const measure = () => {
+      const source = node.querySelector<HTMLElement>(".canvas-highlight");
+      const ruler = node.querySelector<HTMLElement>(".canvas-ruler");
+      const gutter = node.querySelector<HTMLElement>(".canvas-line-number");
+      if (ruler)
+        setAutoWidth(
+          Math.max(
+            420,
+            ruler.offsetWidth +
+              1 +
+              (options.lineNumbers ? (gutter?.offsetWidth || 0) + 24 : 0) +
+              56,
+          ) +
+            options.padding * 2,
+        );
+      setSize({
+        width: node.offsetWidth,
+        height: node.offsetHeight,
+        overflow:
+          !!source &&
+          source.scrollWidth > (source.parentElement?.clientWidth || 0) + 1,
+        code,
+        options,
+      });
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [code, options, fontReady, tokens]);
+  let validation = "";
+  try {
+    validateCode(code);
+  } catch (error) {
+    validation = (error as Error).message;
+  }
+  if (
+    options.widthMode === "fixed" &&
+    (!Number.isInteger(options.width) ||
+      options.width < 320 ||
+      options.width > 2400)
+  )
+    validation = "画布宽度请输入 320–2400 之间的整数（px）。";
+  else if (!validation && size.width > 2400)
+    validation = "单行代码太长，请指定宽度并开启长行换行，或缩小字号。";
+  else if (
+    !validation &&
+    options.widthMode === "fixed" &&
+    !options.wrap &&
+    size.overflow
+  )
+    validation = "代码超出指定宽度，请开启长行自动换行或增加宽度。";
+  if (
+    !validation &&
+    (size.width * size.height * options.scale ** 2 > 16000000 ||
+      size.height * options.scale > 12000)
+  )
+    validation = "图片尺寸过大，请减少代码、字号、行高或导出倍率。";
+  const error = validation || fontError || highlightError;
+  const canExport =
+    !error &&
+    highlighted &&
+    fontReady === options.fontFamily &&
+    size.code === code &&
+    size.options === options &&
+    size.width > 0 &&
+    (options.widthMode === "fixed" || size.width === autoWidth);
+  const displayScale =
+    zoom === "fit"
+      ? Math.min(1, Math.max(0.1, (available - 48) / (size.width || 1)))
+      : Number(zoom);
+  const background =
+    options.background === "transparent"
+      ? "transparent"
+      : options.background === "solid"
+        ? options.color
+        : options.background === "sunset"
+          ? "linear-gradient(135deg, #f4b8a5, #ba9cdf)"
+          : options.background === "slate"
+            ? "linear-gradient(135deg, #dce3ef, #a8b8d0)"
+            : "linear-gradient(135deg, #8ea9ef, #b8a2e6)";
   function update<K extends keyof ImageOptions>(
     key: K,
     value: ImageOptions[K],
   ) {
-    setReady(false);
     setNotice("");
-    setOptions((o) => ({ ...o, [key]: value }));
+    setOptions((previous) => ({ ...previous, [key]: value }));
   }
   function changeCode(value: string) {
-    setReady(false);
-    setCode(value.replace(/\r\n?/g, "\n"));
+    setCode(value);
     setReplace(false);
+    setNotice("");
   }
   async function exportImage(copy: boolean) {
-    if (!canExport || !canvas.current) return;
+    if (!canExport || !artwork.current || exporting) return;
     setExporting(true);
     setNotice("");
     try {
-      const blob = canvasBlob(canvas.current);
+      // Create the promise inside the click gesture, including for Safari's clipboard API.
+      if (
+        copy &&
+        (!navigator.clipboard?.write || typeof ClipboardItem === "undefined")
+      )
+        throw new Error("当前浏览器不支持复制图片，请下载 PNG。");
+      const blob = exportCanvas(artwork.current, options);
       if (copy) {
-        if (!navigator.clipboard?.write || typeof ClipboardItem === "undefined")
-          throw new Error("当前浏览器不支持复制图片，请下载 PNG。");
         await navigator.clipboard.write([
           new ClipboardItem({ "image/png": blob }),
         ]);
@@ -172,13 +263,13 @@ export default function CodeImage() {
         setNotice("PNG 已生成。");
       }
       trackTool("code-image", copy ? "copy_image" : "export", "success");
-    } catch (e) {
+    } catch (error) {
       trackTool("code-image", copy ? "copy_image" : "export", "error");
       setNotice(
         copy
           ? "复制失败或未获剪贴板权限，请使用「下载 PNG」。"
-          : e instanceof Error
-            ? e.message
+          : error instanceof Error
+            ? error.message
             : "导出失败，请重试。",
       );
     } finally {
@@ -213,15 +304,15 @@ export default function CodeImage() {
         <a href="/tools">工具箱</a>
         <span>/</span>代码画布
       </div>
-      <section className="tool-heading">
+      <section className="tool-heading canvas-heading">
         <div>
-          <div className="eyebrow">创作与分享 / CODE IMAGE</div>
+          <div className="eyebrow">创作与分享 / CODE CANVAS</div>
           <h1>代码画布</h1>
-          <p>把值得分享的代码，变成一张好看的图片。</p>
+          <p>直接在画布中写下代码，把眼前的作品带走。</p>
         </div>
-        <span className="shot-badge">PNG · LOCAL</span>
+        <span className="shot-badge">LOCAL · PNG</span>
       </section>
-      <div className="shot-toolbar" aria-label="画布工具栏">
+      <div className="shot-toolbar canvas-toolbar" aria-label="画布工具栏">
         <CanvasPopover
           label={`语言 · ${languages.find(([id]) => id === language)?.[1]}`}
           title="选择语言"
@@ -252,7 +343,6 @@ export default function CodeImage() {
                       value={id}
                       aria-pressed={language === id}
                       onClick={(e) => {
-                        setReady(false);
                         setLanguage(id);
                         setLanguageSearch("");
                         e.currentTarget
@@ -281,13 +371,13 @@ export default function CodeImage() {
               p.theme === options.theme &&
               p.background === options.background &&
               p.padding === options.padding &&
-              p.fontSize === options.fontSize,
+              p.fontSize === options.fontSize &&
+              (!p.color || p.color === options.color),
           )?.name || "custom",
           [["custom", "自定义"], ...imagePresets.map((p) => [p.name, p.name])],
           (name) => {
             const preset = imagePresets.find((p) => p.name === name);
             if (!preset) return;
-            setReady(false);
             setNotice("");
             setOptions((o) => ({
               ...o,
@@ -295,6 +385,7 @@ export default function CodeImage() {
               background: preset.background,
               padding: preset.padding,
               fontSize: preset.fontSize,
+              ...(preset.color ? { color: preset.color } : {}),
             }));
           },
         )}
@@ -309,178 +400,186 @@ export default function CodeImage() {
             update={update}
             exporting={exporting}
             onReset={() => {
-              setReady(false);
               setOptions({ ...defaults, title: options.title });
             }}
           />
         </CanvasPopover>
-      </div>
-      <div className="shot-layout">
-        <section className="shot-controls" aria-label="代码编辑">
-          <div className="shot-editor-title">
-            <label htmlFor="shot-code">代码</label>
-            <div>
-              <button
-                onClick={() =>
-                  code
-                    ? setReplace(true)
-                    : changeCode(sampleForLanguage(language))
-                }
-                disabled={exporting}
-              >
-                加载示例
-              </button>
-              <button onClick={() => changeCode("")} disabled={exporting}>
-                清空
-              </button>
-            </div>
-          </div>
-          {replace && (
-            <div className="replace-prompt">
-              用当前语言的示例替换代码？
-              <button onClick={() => changeCode(sampleForLanguage(language))}>
-                替换
-              </button>
-              <button onClick={() => setReplace(false)}>取消</button>
-            </div>
-          )}
-          <CodeEditor
-            id="shot-code"
-            label="代码"
-            value={code}
-            onChange={changeCode}
-            language="plain"
-            indent="4"
-            wrap
-            readOnly={exporting}
-            segments={
-              tokens?.code === code && tokens.language === language
-                ? tokens.segments
-                : undefined
-            }
-            placeholder="粘贴代码开始创作…"
-          />
-          <p id="shot-limit" className="shot-caption">
-            {code.length.toLocaleString()} / 12,000 字符 · 最多 160 行
-          </p>
-        </section>
-        <section className="shot-preview-panel" aria-label="图片预览">
-          <div className="shot-preview-heading">
-            <strong>实时预览</strong>
-            <span>
-              {ready ? `${size.width} × ${size.height} px` : "等待生成"}
-            </span>
-          </div>
-          <div
-            className={`shot-preview-stage ${zoom === "fit" ? "is-fit" : "is-zoomed"}`}
-            aria-busy={!ready && !error}
-          >
-            <canvas
-              ref={canvas}
-              role="img"
-              aria-label={
-                canExport
-                  ? "代码画布预览，内容与编辑区代码一致"
-                  : "上一次生成的预览，当前内容尚未生成"
-              }
-              style={{
-                display: hasPreview ? "block" : "none",
-                width:
-                  zoom === "fit"
-                    ? undefined
-                    : `${(size.width / size.scale) * Number(zoom)}px`,
-              }}
-            />
-            {!canExport && (
-              <p
-                className={hasPreview ? "shot-preview-status" : undefined}
-                role="status"
-              >
-                {error
-                  ? hasPreview
-                    ? "保留上次预览 · 请修正输入或设置"
-                    : "请调整输入或设置"
-                  : hasPreview
-                    ? "正在更新预览…"
-                    : "正在生成预览…"}
-              </p>
-            )}
-          </div>
-          <label className="shot-zoom">
-            预览缩放
-            <select
-              aria-label="预览缩放"
-              value={zoom}
-              onChange={(e) => setZoom(e.target.value)}
-            >
-              <option value="fit">适应窗口</option>
-              <option value="0.5">50%</option>
-              <option value="1">100%</option>
-              <option value="1.5">150%</option>
-            </select>
-          </label>
-          {error && (
-            <div className="error-box" role="alert">
-              {error}
-            </div>
-          )}
-          <div className="shot-export">
-            {select(
-              "导出倍率",
-              String(options.scale),
-              [
-                ["1", "1× 标准"],
-                ["2", "2× 高清"],
-                ["3", "3× 超清"],
-              ],
-              (v) => update("scale", Number(v)),
-            )}
 
-            <button
-              disabled={!canExport || exporting}
-              onClick={() => exportImage(true)}
-            >
-              复制图片
-            </button>
-            <button
-              className="primary"
-              disabled={!canExport || exporting}
-              onClick={() => exportImage(false)}
-            >
-              {exporting ? "正在导出…" : "下载 PNG"}{" "}
-              <span aria-hidden="true">↓</span>
-            </button>
-          </div>
-          <div className="notice" role="status">
-            {notice}
-          </div>
-          <p className="shot-caption">
-            预览缩放不影响导出，PNG 保留上方显示的实际分辨率。
-          </p>
-        </section>
+        <div className="canvas-export-actions">
+          {select(
+            "导出倍率",
+            String(options.scale),
+            [
+              ["1", "1×"],
+              ["2", "2×"],
+              ["3", "3×"],
+            ],
+            (value) => update("scale", Number(value)),
+          )}
+          <button
+            disabled={!canExport || exporting}
+            onClick={() => exportImage(true)}
+          >
+            复制图片
+          </button>
+          <button
+            className="primary"
+            disabled={!canExport || exporting}
+            onClick={() => exportImage(false)}
+          >
+            {exporting ? "正在导出…" : "下载 PNG"}
+          </button>
+        </div>
       </div>
-      <section className="instructions">
-        <h2>使用说明</h2>
-        <p>
-          粘贴代码，选择语言和外观，即可复制或下载 PNG。支持 28
-          种语言与格式；Tab 缩进，Ctrl / ⌘ + Z 撤销，Ctrl / ⌘ + F 查找，按 Esc
-          后 Tab
-          可离开编辑器。内容只在浏览器内处理，不执行代码、不上传。仅在本机记住外观偏好，不保存代码或窗口标题；刷新页面会恢复示例。
-        </p>
+      <div className="canvas-utility">
+        <span id="canvas-help">
+          点击代码直接编辑 · Tab 缩进 · Esc 后 Tab 离开 · Ctrl / ⌘ + F 查找
+        </span>
+        <button
+          disabled={exporting}
+          onClick={() =>
+            code ? setReplace(true) : changeCode(sampleForLanguage(language))
+          }
+        >
+          加载示例
+        </button>
+        <button disabled={exporting} onClick={() => changeCode("")}>
+          清空
+        </button>
+      </div>
+      {replace && (
+        <div className="replace-prompt">
+          用当前语言的示例替换代码？
+          <button onClick={() => changeCode(sampleForLanguage(language))}>
+            替换
+          </button>
+          <button onClick={() => setReplace(false)}>取消</button>
+        </div>
+      )}
+      <div
+        className={`canvas-stage ${options.background === "transparent" ? "is-transparent" : ""}`}
+        ref={stage}
+        aria-label="画布工作区"
+        aria-busy={exporting}
+      >
+        <div
+          className="canvas-frame"
+          style={{
+            width: size.width ? size.width * displayScale : undefined,
+            height: size.height ? size.height * displayScale : undefined,
+          }}
+        >
+          <div
+            className="canvas-artwork"
+            ref={artwork}
+            style={
+              {
+                padding: options.padding,
+                width:
+                  options.widthMode === "fixed" &&
+                  Number.isFinite(options.width)
+                    ? Math.max(320, Math.min(2400, options.width))
+                    : autoWidth,
+                background,
+                transform: `scale(${displayScale})`,
+                font: canvasFont(options),
+                fontVariantLigatures: "none",
+                lineHeight: `${Math.ceil(options.fontSize * options.lineHeight)}px`,
+                color: theme.text,
+              } as CSSProperties
+            }
+          >
+            <div
+              className="canvas-measure"
+              data-export-ignore
+              aria-hidden="true"
+            >
+              <span className="canvas-ruler">{code || " "}</span>
+            </div>
+            <div
+              className="canvas-window"
+              style={{
+                background: theme.bg,
+                minWidth: options.widthMode === "fixed" ? 0 : 420,
+              }}
+            >
+              {options.windowBar && (
+                <div className="canvas-windowbar">
+                  <div className="canvas-window-dots" aria-hidden="true">
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                  <div className="canvas-title" style={{ color: theme.muted }}>
+                    <span aria-hidden="true">{options.title || "\u00a0"}</span>
+                    <input
+                      data-export-ignore
+                      aria-label="窗口标题"
+                      placeholder="添加标题…"
+                      value={options.title}
+                      maxLength={80}
+                      disabled={exporting}
+                      onChange={(event) => update("title", event.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+              <div className="canvas-code-padding">
+                <CanvasCode
+                  code={code}
+                  segments={segments}
+                  colors={theme.colors}
+                  muted={theme.muted}
+                  lineNumbers={options.lineNumbers}
+                  wrap={options.widthMode === "fixed" && options.wrap}
+                  readOnly={exporting}
+                  onChange={changeCode}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="canvas-statusbar">
+        <span>{code.length.toLocaleString()} / 12,000 字符</span>
+        <span>
+          {size.width * options.scale} × {size.height * options.scale} px
+        </span>
+        <label>
+          画布缩放
+          <select
+            aria-label="画布缩放"
+            value={zoom}
+            onChange={(event) => setZoom(event.target.value)}
+          >
+            <option value="fit">适应宽度</option>
+            <option value="0.5">50%</option>
+            <option value="0.75">75%</option>
+            <option value="1">100%</option>
+            <option value="1.5">150%</option>
+          </select>
+        </label>
+      </div>
+      {error && (
+        <div className="error-box" role="alert">
+          {error}
+        </div>
+      )}
+      <div className="notice" role="status">
+        {notice || (!error && !canExport ? "正在准备字体与高亮…" : "")}
+      </div>
+      <section className="instructions canvas-instructions">
         <details>
-          <summary>图片和预览一致吗？</summary>
+          <summary>使用说明 · 编辑与导出</summary>
           <p>
-            预览和导出使用同一张画布，支持中文、透明背景和 1× / 2× / 3×
-            倍率。字体使用设备上的等宽字体，跨设备可能略有差异。Tab
-            显示为四个空格。可在外观设置中指定图片宽度并开启长行换行，编辑区源码保持不变。
+            在画布上直接输入代码、修改标题。画布会随内容增高；缩放只影响查看比例，导出使用实际尺寸。PNG
+            不包含光标、选区和操作控件。支持 28 种语言与格式，以及 1× / 2× / 3×
+            导出。中文和未覆盖字符使用系统字体回退。
           </p>
-        </details>
-        <details>
-          <summary>为什么不能导出？</summary>
           <p>
-            空代码、关闭换行后超出指定宽度的长行或超出 1600
-            万像素的图片会暂停导出，请减少代码、字号或倍率。复制图片需要浏览器支持和剪贴板权限，失败时可以下载
-            PNG。
+            所有内容在浏览器内处理，不执行或上传代码。仅记住外观设置，不保存代码或标题。最多支持
+            12,000 字符、160 行和 1600
+            万导出像素；长行可在外观设置中指定宽度并自动换行。
           </p>
         </details>
       </section>

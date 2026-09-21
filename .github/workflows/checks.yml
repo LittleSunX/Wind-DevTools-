@@ -30,6 +30,7 @@ jobs:
           npm run test:browser
           npm run test:code-image
           npm run test:compat
+          npm run test:sidebar
         env:
           PW_CHANNEL: bundled
       - uses: actions/upload-artifact@v4

@@ -30,6 +30,8 @@ describe("canvas appearance preferences", () => {
         width: NaN,
         padding: 500,
         fontSize: 0,
+        fontFamily: "remote-url",
+        lineHeight: -1,
         lineNumbers: "yes",
         code: "x",
         title: "y",
@@ -40,6 +42,22 @@ describe("canvas appearance preferences", () => {
     expect(
       sanitizePreferences({ width: 721, color: "#aBcD12", widthMode: "fixed" }),
     ).toEqual({ width: 721, color: "#aBcD12", widthMode: "fixed" });
+  });
+  it("restores typography while older preferences receive safe defaults", () => {
+    expect(
+      readPreferences({ getItem: () => JSON.stringify({ theme: "light" }) })
+        .fontFamily,
+    ).toBe("jetbrains");
+    expect(
+      readPreferences({
+        getItem: () =>
+          JSON.stringify({
+            fontFamily: "source",
+            lineHeight: 1.4,
+            theme: "paper",
+          }),
+      }),
+    ).toMatchObject({ fontFamily: "source", lineHeight: 1.4, theme: "paper" });
   });
   it("recovers from corrupted, blocked or full storage", () => {
     expect(readPreferences({ getItem: () => "{" })).toEqual(defaults);

@@ -1252,3 +1252,107 @@ select {
     font-size: 11px;
   }
 }
+
+/* Collapsible workspace navigation. The compact rail keeps tools one click away. */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.sidebar-toggle {
+  width: 36px;
+  height: 36px;
+  padding: 8px;
+  border: 0;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.mobile-sidebar-toggle {
+  display: none;
+}
+.sidebar {
+  position: sticky;
+  top: 78px;
+  height: calc(100dvh - 78px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  transition:
+    width 180ms ease,
+    padding 180ms ease;
+}
+.side-label {
+  white-space: nowrap;
+}
+.sidebar.is-collapsed {
+  width: 64px;
+  padding: 33px 10px;
+}
+.sidebar.is-collapsed .sidebar-caption,
+.sidebar.is-collapsed .side-label,
+.sidebar.is-collapsed .side-home small,
+.sidebar.is-collapsed .active-dot,
+.sidebar.is-collapsed .sidebar-bottom {
+  display: none;
+}
+.sidebar.is-collapsed .side-home,
+.sidebar.is-collapsed .side-link {
+  padding: 13px 10px;
+  gap: 0;
+  justify-content: center;
+}
+.sidebar.is-collapsed .side-home {
+  margin-bottom: 25px;
+}
+.sidebar-drawer {
+  inset: 0 auto 0 0;
+  margin: 0;
+  width: min(300px, calc(100vw - 48px));
+  height: 100dvh;
+  max-height: 100dvh;
+  max-width: none;
+  padding: 20px 16px max(24px, env(safe-area-inset-bottom));
+  border: 0;
+  border-right: 1px solid #e1e2e6;
+  background: #f9f9fa;
+  color: #20232b;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.sidebar-drawer::backdrop {
+  background: #15274750;
+}
+.sidebar-drawer-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+}
+.sidebar-drawer-heading button {
+  border: 0;
+  background: transparent;
+  font-size: 12px;
+}
+@media (max-width: 800px) {
+  .desktop-sidebar-toggle {
+    display: none;
+  }
+  .mobile-sidebar-toggle {
+    display: inline-flex;
+  }
+  .topbar {
+    gap: 12px;
+    padding: 0 16px;
+  }
+  .topbar nav {
+    gap: 14px;
+  }
+}
+@media (max-width: 380px) {
+  .topbar .brand-divider,
+  .topbar .brand-product {
+    display: none;
+  }
+}

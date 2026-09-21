@@ -1,3 +1,4 @@
+import Sidebar, { SidebarIcon, useSidebar } from "./components/Sidebar";
 import CodeEditor from "./components/CodeEditor";
 import CodeImage from "./components/CodeImage";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -52,6 +53,7 @@ export function App({ path = "/tools" }: { path?: string }) {
   const normalized = path.replace(/\/$/, "") || "/";
   const current = tools.find((t) => normalized === `/tools/${t.id}`);
   const isHome = normalized === "/" || normalized === "/tools";
+  const sidebar = useSidebar();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("全部工具");
   const [input, setInput] = useState("");
@@ -211,6 +213,28 @@ export function App({ path = "/tools" }: { path?: string }) {
         跳转到主要内容
       </a>
       <header className="topbar">
+        <button
+          className="sidebar-toggle desktop-sidebar-toggle"
+          type="button"
+          aria-label={sidebar.collapsed ? "展开侧边栏" : "收起侧边栏"}
+          title={sidebar.collapsed ? "展开侧边栏" : "收起侧边栏"}
+          aria-expanded={!sidebar.collapsed}
+          aria-controls="desktop-sidebar"
+          onClick={sidebar.toggleDesktop}
+        >
+          <SidebarIcon />
+        </button>
+        <button
+          className="sidebar-toggle mobile-sidebar-toggle"
+          type="button"
+          ref={sidebar.mobileToggle}
+          aria-label="打开工具导航"
+          aria-expanded={sidebar.mobileOpen}
+          aria-controls="mobile-sidebar"
+          onClick={sidebar.openMobile}
+        >
+          <SidebarIcon />
+        </button>
         <a className="brand" href="/tools">
           <span className="brand-name">
             wind<span className="brand-period">.</span>
@@ -230,35 +254,68 @@ export function App({ path = "/tools" }: { path?: string }) {
         <span className="version">v1.0</span>
       </header>
       <div className="layout">
-        <aside className="sidebar">
-          <div className="sidebar-caption">WORKSPACE</div>
-          <a className={`side-home ${isHome ? "selected" : ""}`} href="/tools">
-            <span>▦</span> 全部工具{" "}
-            <small>{String(tools.length).padStart(2, "0")}</small>
-          </a>
-          <div className="sidebar-caption section-caption">开发工具</div>
-          {tools.map((t) => (
-            <a
-              className={`side-link ${current?.id === t.id ? "selected" : ""}`}
-              href={`/tools/${t.id}`}
-              key={t.id}
-            >
-              <span className="side-icon">{t.icon}</span>
-              {t.name}
-              {current?.id === t.id && <span className="active-dot" />}
-            </a>
-          ))}
-          <div className="sidebar-bottom">
-            <span className="tiny-lock">⌑</span>
-            <strong>放心粘贴，安心处理</strong>
-            <p>
-              无需登录，无需上传。
-              <br />
-              每一次处理，都在本地完成。
-            </p>
-            <span className="small-mono">BUILT FOR DEVELOPERS</span>
-          </div>
+        <aside
+          id="desktop-sidebar"
+          className={`sidebar ${sidebar.collapsed ? "is-collapsed" : ""}`}
+          aria-label="侧边栏"
+        >
+          <Sidebar
+            currentId={current?.id}
+            isHome={isHome}
+            collapsed={sidebar.collapsed}
+          />
         </aside>
+        <dialog
+          id="mobile-sidebar"
+          className="sidebar-drawer"
+          ref={sidebar.dialog}
+          aria-label="工具导航菜单"
+          onClose={sidebar.onMobileClose}
+          onKeyDown={(event) => {
+            if (event.key !== "Tab") return;
+            const items =
+              event.currentTarget.querySelectorAll<HTMLElement>(
+                "button, a[href]",
+              );
+            const first = items[0];
+            const last = items[items.length - 1];
+            if (event.shiftKey && document.activeElement === first) {
+              event.preventDefault();
+              last?.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+              event.preventDefault();
+              first?.focus();
+            }
+          }}
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              const rect = event.currentTarget.getBoundingClientRect();
+              if (
+                event.clientX < rect.left ||
+                event.clientX > rect.right ||
+                event.clientY < rect.top ||
+                event.clientY > rect.bottom
+              )
+                sidebar.closeMobile();
+            }
+          }}
+        >
+          <div className="sidebar-drawer-heading">
+            <strong>工具导航</strong>
+            <button
+              type="button"
+              aria-label="关闭工具导航"
+              onClick={sidebar.closeMobile}
+            >
+              关闭
+            </button>
+          </div>
+          <Sidebar
+            currentId={current?.id}
+            isHome={isHome}
+            onNavigate={sidebar.closeMobile}
+          />
+        </dialog>
         <main
           id="main"
           className={current ? `tool-page tool-${current.id}` : undefined}

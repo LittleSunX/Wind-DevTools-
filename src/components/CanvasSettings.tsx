@@ -1,5 +1,10 @@
 import { useState } from "react";
-import type { ImageOptions } from "../utils/code-image";
+import {
+  canvasFonts,
+  themeChoices,
+  themes,
+  type ImageOptions,
+} from "../utils/code-image";
 export default function CanvasSettings({
   options,
   update,
@@ -44,6 +49,31 @@ export default function CanvasSettings({
   );
   return (
     <div className="shot-settings">
+      <div className="shot-theme-grid shot-wide" role="group" aria-label="主题">
+        {themeChoices.map(([id, label]) => {
+          const theme = themes[id];
+          return (
+            <button
+              type="button"
+              key={id}
+              aria-label={`应用${label}主题`}
+              aria-pressed={options.theme === id}
+              disabled={exporting}
+              onClick={() => update("theme", id)}
+              style={{ background: theme.bg, color: theme.text }}
+            >
+              <span className="shot-theme-code" aria-hidden="true">
+                <span style={{ color: theme.colors.keyword }}>const </span>wind
+                = <span style={{ color: theme.colors.string }}>"hello"</span>
+              </span>
+              <span>
+                {label}
+                {options.theme === id ? " ✓" : ""}
+              </span>
+            </button>
+          );
+        })}
+      </div>
       {select(
         "宽度模式",
         options.widthMode,
@@ -105,16 +135,6 @@ export default function CanvasSettings({
       )}
 
       {select(
-        "主题",
-        options.theme,
-        [
-          ["night", "午夜蓝"],
-          ["graphite", "石墨黑"],
-          ["light", "明亮"],
-        ],
-        (v) => update("theme", v),
-      )}
-      {select(
         "背景",
         options.background,
         [
@@ -139,6 +159,22 @@ export default function CanvasSettings({
         </label>
       )}
       {select(
+        "字体",
+        options.fontFamily,
+        canvasFonts.map((font) => [font.id, font.name]),
+        (v) => update("fontFamily", v),
+      )}
+      {select(
+        "行高",
+        String(options.lineHeight),
+        [
+          ["1.4", "紧凑 · 1.4"],
+          ["1.65", "舒适 · 1.65"],
+          ["1.9", "宽松 · 1.9"],
+        ],
+        (v) => update("lineHeight", Number(v)),
+      )}
+      {select(
         "字号",
         String(options.fontSize),
         [14, 16, 18, 20, 24].map((n) => [String(n), `${n} px`]),
@@ -155,16 +191,6 @@ export default function CanvasSettings({
         ],
         (v) => update("padding", Number(v)),
       )}
-      <label className="shot-field shot-wide">
-        窗口标题
-        <input
-          aria-label="窗口标题"
-          maxLength={80}
-          value={options.title}
-          onChange={(e) => update("title", e.target.value)}
-          disabled={exporting || !options.windowBar}
-        />
-      </label>
       <label className="shot-check">
         <input
           type="checkbox"
