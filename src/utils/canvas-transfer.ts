@@ -24,13 +24,14 @@ const transferByTool: Record<
 export function createCanvasTransfer(
   sourceTool: string,
   code: string,
+  override?: Partial<Pick<CanvasTransferPayload, "language" | "title">>,
 ): CanvasTransferPayload | null {
   const preset = transferByTool[sourceTool];
   if (!preset || !code.trim()) return null;
   return {
     code,
-    language: preset.language,
-    title: preset.title,
+    language: override?.language || preset.language,
+    title: override?.title || preset.title,
     sourceTool,
   };
 }
