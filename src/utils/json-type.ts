@@ -1,7 +1,13 @@
 import { jsonTool } from "./json";
 import type { Options } from "./shared";
 
-type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
+type JsonValue =
+  | null
+  | boolean
+  | number
+  | string
+  | JsonValue[]
+  | { [key: string]: JsonValue };
 
 function parseJson(input: string): JsonValue {
   jsonTool(input, { action: "validate" });
@@ -18,7 +24,7 @@ function titleCase(name: string) {
   return id.charAt(0).toUpperCase() + id.slice(1);
 }
 
-function tsType(value: JsonValue, name: string, defs: string[]): string {
+function tsType(value: JsonValue, name: string, defs: Map<string, string>): string {
   if (value === null) return "null";
   if (Array.isArray(value)) {
     if (!value.length) return "unknown[]";
@@ -38,18 +44,21 @@ function tsType(value: JsonValue, name: string, defs: string[]): string {
         const childName = `${typeName}${titleCase(key)}`;
         return `  ${JSON.stringify(key)}: ${tsType(item, childName, defs)};`;
       });
-      defs.push(`export interface ${typeName} {\n${fields.join("\n")}\n}`);
+      defs.set(typeName, `export interface ${typeName} {\n${fields.join("\n")}\n}`);
       return typeName;
     }
   }
 }
 
-function javaType(value: JsonValue, name: string, defs: string[]): string {
+function javaType(
+  value: JsonValue,
+  name: string,
+  defs: Map<string, string>,
+): string {
   if (value === null) return "Object";
   if (Array.isArray(value)) {
     if (!value.length) return "List<Object>";
-    const first = javaType(value[0], name, defs);
-    return `List<${first}>`;
+    return `List<${javaType(value[0], name, defs)}>`;
   }
   switch (typeof value) {
     case "string":
@@ -64,7 +73,7 @@ function javaType(value: JsonValue, name: string, defs: string[]): string {
         const childName = `${className}${titleCase(key)}`;
         return `    private ${javaType(item, childName, defs)} ${safeIdentifier(key)};`;
       });
-      defs.push(`public static class ${className} {\n${fields.join("\n")}\n}`);
+      defs.set(className, `class ${className} {\n${fields.join("\n")}\n}`);
       return className;
     }
   }
@@ -73,17 +82,42 @@ function javaType(value: JsonValue, name: string, defs: string[]): string {
 export function jsonTypeTool(input: string, options: Options) {
   const value = parseJson(input);
   const rootName = titleCase(options.rootName || "Root");
-  const defs: string[] = [];
+
   if (options.target === "java") {
+    const defs = new Map<string, string>();
     const rootType = javaType(value, rootName, defs);
-    const body =
-      typeof value === "object" && value !== null && !Array.isArray(value)
-        ? defs.reverse().join("\n\n")
-        : `public class ${rootName} {\n    private ${rootType} value;\n}`;
-    return `import java.util.List;\n\n${body}`;
+    if (
+      typeof value === "object" &&
+      value !== null &&
+      !Array.isArray(value) &&
+      defs.has(rootName)
+    ) {
+      const root = defs.get(rootName)!.replace(
+        `class ${rootName}`,
+        `public class ${rootName}`,
+      );
+      const children = [...defs.entries()]
+        .filter(([name]) => name !== rootName)
+        .map(([, definition]) => definition)
+        .join("\n\n");
+      return `import java.util.List;\n\n${root}${children ? `\n\n${children}` : ""}`;
+    }
+    return `import java.util.List;\n\npublic class ${rootName} {\n    private ${rootType} value;\n}`;
   }
+
+  const defs = new Map<string, string>();
   const rootType = tsType(value, rootName, defs);
-  if (typeof value === "object" && value !== null && !Array.isArray(value))
-    return defs.reverse().join("\n\n");
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    defs.has(rootName)
+  ) {
+    const root = defs.get(rootName)!;
+    const children = [...defs.entries()]
+      .filter(([name]) => name !== rootName)
+      .map(([, definition]) => definition);
+    return [root, ...children].join("\n\n");
+  }
   return `export type ${rootName} = ${rootType};`;
 }
