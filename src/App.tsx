@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { categories, tools } from "./catalog";
 import { trackTool } from "./analytics";
 import type { Options } from "./utils/shared";
+import { createCanvasTransfer, writeCanvasTransfer } from "./utils/canvas-transfer";
 const defaultOptions: Options = {
   indent: "2",
   dialect: "mysql",
@@ -199,6 +200,26 @@ export function App({ path = "/tools" }: { path?: string }) {
     a.download = `wind-${current?.id}.${current?.id === "sql" ? "sql" : current?.id === "json" ? "json" : "txt"}`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  function sendToCanvas() {
+    if (!current || !output) return;
+    if (output.length > 12000 || output.split(/\r\n|\r|\n/).length > 160) {
+      setNotice("结果超过代码画布限制（12,000 字符 / 160 行），请精简后再发送。");
+      return;
+    }
+    const payload = createCanvasTransfer(current.id, output);
+    if (!payload) {
+      setNotice("当前结果暂不支持发送到代码画布。");
+      return;
+    }
+    try {
+      writeCanvasTransfer(sessionStorage, payload);
+      trackTool(current.id, "send_to_canvas", "success");
+      window.location.assign("/tools/code-image");
+    } catch {
+      trackTool(current.id, "send_to_canvas", "error");
+      setNotice("无法暂存结果，请检查浏览器存储设置后重试。");
+    }
   }
   const visible = tools.filter(
     (t) =>
@@ -737,6 +758,9 @@ export function App({ path = "/tools" }: { path?: string }) {
                     <button disabled={!output} onClick={download}>
                       下载
                     </button>
+                    <button disabled={!output} onClick={sendToCanvas}>
+                      发送到代码画布
+                    </button>
                   </div>
                   <div className="output-wrap">
                     {codeLanguage ? (
@@ -817,8 +841,7 @@ export function App({ path = "/tools" }: { path?: string }) {
                 <details>
                   <summary>输入内容会被保存吗？</summary>
                   <p>
-                    不会自动保存到服务器、浏览器存储或
-                    URL。刷新页面会清除输入。主动下载的文件会保存在你的设备上。启用访问统计时仅记录页面与工具操作，不包含输入、输出或错误原文。
+                    不会自动保存到服务器、浏览器存储或 URL。刷新页面会清除输入。只有当你主动选择“发送到代码画布”时，处理结果才会临时写入当前标签页的 sessionStorage，并在代码画布读取后立即删除。主动下载的文件会保存在你的设备上。启用访问统计时仅记录页面与工具操作，不包含输入、输出或错误原文。
                   </p>
                 </details>
                 <details>
