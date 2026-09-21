@@ -45,8 +45,8 @@ export default function CodeImage() {
   const [replace, setReplace] = useState(false);
   const [languageSearch, setLanguageSearch] = useState("");
   const [zoom, setZoom] = useState("1");
-  const [settingsOpenSignal, setSettingsOpenSignal] = useState(0);
   const [draggingFile, setDraggingFile] = useState(false);
+  const settingsTrigger = useRef<HTMLButtonElement>(null);
   const artwork = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const [available, setAvailable] = useState(1000);
@@ -449,7 +449,7 @@ export default function CodeImage() {
           [["custom", "自定义"], ...imagePresets.map((p) => [p.name, p.name])],
           (name) => {
             if (name === "custom") {
-              setSettingsOpenSignal((value) => value + 1);
+              requestAnimationFrame(() => settingsTrigger.current?.click());
               return;
             }
             const preset = imagePresets.find((p) => p.name === name);
@@ -467,7 +467,7 @@ export default function CodeImage() {
         )}
         <CanvasPopover
           alignEnd
-          openSignal={settingsOpenSignal}
+          triggerRef={settingsTrigger}
           label="外观设置"
           title="外观设置"
           disabled={exporting}
