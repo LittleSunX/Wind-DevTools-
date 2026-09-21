@@ -468,7 +468,15 @@ export default function CodeImage() {
               p.background === options.background &&
               p.padding === options.padding &&
               p.fontSize === options.fontSize &&
-              (!p.color || p.color === options.color),
+              p.fontFamily === options.fontFamily &&
+              p.lineHeight === options.lineHeight &&
+              p.codePadding === options.codePadding &&
+              p.lineNumbers === options.lineNumbers &&
+              p.windowStyle === options.windowStyle &&
+              p.windowRadius === options.windowRadius &&
+              p.shadow === options.shadow &&
+              p.aspectRatio === options.aspectRatio &&
+              (!("color" in p) || p.color === options.color),
           )?.name || "custom",
           [["custom", "自定义"], ...imagePresets.map((p) => [p.name, p.name])],
           (name) => {
@@ -485,7 +493,16 @@ export default function CodeImage() {
               background: preset.background,
               padding: preset.padding,
               fontSize: preset.fontSize,
-              ...(preset.color ? { color: preset.color } : {}),
+              fontFamily: preset.fontFamily,
+              lineHeight: preset.lineHeight,
+              codePadding: preset.codePadding,
+              lineNumbers: preset.lineNumbers,
+              windowStyle: preset.windowStyle,
+              windowRadius: preset.windowRadius,
+              shadow: preset.shadow,
+              aspectRatio: preset.aspectRatio,
+              windowBar: preset.windowStyle !== "none",
+              ...("color" in preset ? { color: preset.color } : {}),
             }));
           },
         )}
