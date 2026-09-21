@@ -12,8 +12,7 @@ export function canvasTools(page) {
     );
   }
   async function field(label) {
-    if (["代码", "窗口标题", "画布缩放", "风格"].includes(label))
-      await close();
+    if (["代码", "窗口标题", "画布缩放", "风格"].includes(label)) await close();
     else if (
       !(await page
         .getByRole("dialog", { name: "外观设置", exact: true })
