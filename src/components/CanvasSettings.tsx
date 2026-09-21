@@ -305,6 +305,9 @@ export default function CanvasSettings({
           disabled={exporting}
         />
       </label>
+      <p className="shot-setting-help shot-wide">
+        高亮行按当前显示行号填写，支持逗号和范围，例如 101,103-105。
+      </p>
       <label className="shot-check">
         <input
           type="checkbox"
