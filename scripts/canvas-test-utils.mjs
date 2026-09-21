@@ -50,14 +50,18 @@ export function canvasTools(page) {
           if (this.download && this.href.startsWith("blob:")) {
             const href = this.href;
             const name = this.download;
-            window.__windCapturedDownload = fetch(href).then(async (response) => {
-              const bytes = new Uint8Array(await response.arrayBuffer());
-              let binary = "";
-              const chunk = 0x8000;
-              for (let i = 0; i < bytes.length; i += chunk)
-                binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
-              return { name, base64: btoa(binary) };
-            });
+            window.__windCapturedDownload = fetch(href).then(
+              async (response) => {
+                const bytes = new Uint8Array(await response.arrayBuffer());
+                let binary = "";
+                const chunk = 0x8000;
+                for (let i = 0; i < bytes.length; i += chunk)
+                  binary += String.fromCharCode(
+                    ...bytes.subarray(i, i + chunk),
+                  );
+                return { name, base64: btoa(binary) };
+              },
+            );
           }
           return original.call(this);
         };
