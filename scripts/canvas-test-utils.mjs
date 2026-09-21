@@ -1,7 +1,7 @@
 import { expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 export function canvasTools(page) {
-  const download = page.getByRole("button", { name: "下载 PNG", exact: true });
+  const download = page.getByRole("button", { name: "导出", exact: true });
   const editor = page.getByLabel("代码", { exact: true });
   const artwork = page.locator(".canvas-artwork");
   async function close() {
@@ -12,7 +12,7 @@ export function canvasTools(page) {
     );
   }
   async function field(label) {
-    if (["代码", "窗口标题", "画布缩放", "导出倍率", "风格"].includes(label))
+    if (["代码", "窗口标题", "画布缩放", "风格"].includes(label))
       await close();
     else if (
       !(await page
@@ -31,11 +31,25 @@ export function canvasTools(page) {
     await page.getByLabel("搜索语言", { exact: true }).fill(id);
     await page.locator(`.shot-language-list button[value="${id}"]`).click();
   }
+  async function scale(value) {
+    await close();
+    await ready();
+    await download.click();
+    await page
+      .getByRole("dialog", { name: "导出", exact: true })
+      .getByRole("button", { name: `${value}×`, exact: true })
+      .click();
+    await close();
+  }
   async function png(path) {
     await close();
     await ready();
-    const pending = page.waitForEvent("download");
     await download.click();
+    const pending = page.waitForEvent("download");
+    await page
+      .getByRole("dialog", { name: "导出", exact: true })
+      .getByRole("button", { name: "下载 PNG", exact: true })
+      .click();
     const file = await pending;
     await file.saveAs(path);
     return { bytes: await readFile(path), name: file.suggestedFilename() };
@@ -54,6 +68,7 @@ export function canvasTools(page) {
     field,
     ready,
     language,
+    scale,
     png,
     dimensions,
   };
