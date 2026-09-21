@@ -8,6 +8,8 @@ export type Options = {
   direction?: string;
   mode?: string;
   codec?: string;
+  codecDirection?: string;
+  textAction?: string;
   target?: string;
   rootName?: string;
   prefix?: string;
