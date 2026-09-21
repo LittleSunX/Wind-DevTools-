@@ -634,6 +634,7 @@ export default function CodeImage() {
             <div className="canvas-action-menu">
               <button
                 type="button"
+                aria-label="复制图片"
                 onClick={(event) => {
                   hideActionMenu(event.currentTarget);
                   void copyImage();
@@ -644,6 +645,7 @@ export default function CodeImage() {
               </button>
               <button
                 type="button"
+                aria-label="复制 SVG 源码"
                 onClick={(event) => {
                   hideActionMenu(event.currentTarget);
                   void copySvgSource();
@@ -654,6 +656,7 @@ export default function CodeImage() {
               </button>
               <button
                 type="button"
+                aria-label="复制 PNG Data URL"
                 onClick={(event) => {
                   hideActionMenu(event.currentTarget);
                   void copyPngText("data-url");
@@ -664,6 +667,7 @@ export default function CodeImage() {
               </button>
               <button
                 type="button"
+                aria-label="复制 PNG Base64"
                 onClick={(event) => {
                   hideActionMenu(event.currentTarget);
                   void copyPngText("base64");
@@ -674,6 +678,7 @@ export default function CodeImage() {
               </button>
               <button
                 type="button"
+                aria-label="在新标签页打开"
                 onClick={(event) => {
                   hideActionMenu(event.currentTarget);
                   void openPngPreview();
@@ -714,6 +719,7 @@ export default function CodeImage() {
               <div className="canvas-action-menu">
                 <button
                   type="button"
+                  aria-label="下载 PNG"
                   onClick={(event) => {
                     hideActionMenu(event.currentTarget);
                     void downloadPng();
@@ -724,6 +730,7 @@ export default function CodeImage() {
                 </button>
                 <button
                   type="button"
+                  aria-label="下载 SVG"
                   onClick={(event) => {
                     hideActionMenu(event.currentTarget);
                     void downloadSvg();
