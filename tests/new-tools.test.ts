@@ -79,6 +79,22 @@ describe("JSON to type", () => {
     expect(result).toContain("class UserProfile");
     expect(result).not.toContain("public static class");
   });
+
+  it("handles root arrays without self-referential aliases", () => {
+    const ts = jsonTypeTool('[{"id":1}]', {
+      target: "typescript",
+      rootName: "Users",
+    });
+    expect(ts).toContain("export type Users = UsersItem[];");
+    expect(ts).toContain("export interface UsersItem");
+
+    const java = jsonTypeTool('[{"id":1}]', {
+      target: "java",
+      rootName: "Users",
+    });
+    expect(java).toContain("private List<UsersItem> value;");
+    expect(java).toContain("class UsersItem");
+  });
 });
 
 describe("text diff", () => {
