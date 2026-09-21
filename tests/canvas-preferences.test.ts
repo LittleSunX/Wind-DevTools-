@@ -40,8 +40,20 @@ describe("canvas appearance preferences", () => {
       }),
     ).toEqual({ scale: 2, wrap: false });
     expect(
-      sanitizePreferences({ width: 721, color: "#aBcD12", widthMode: "fixed" }),
-    ).toEqual({ width: 721, color: "#aBcD12", widthMode: "fixed" });
+      sanitizePreferences({
+        width: 721,
+        color: "#aBcD12",
+        widthMode: "fixed",
+        windowRadius: 18,
+        shadow: "strong",
+      }),
+    ).toEqual({
+      width: 721,
+      color: "#aBcD12",
+      widthMode: "fixed",
+      windowRadius: 18,
+      shadow: "strong",
+    });
   });
   it("restores typography while older preferences receive safe defaults", () => {
     expect(
