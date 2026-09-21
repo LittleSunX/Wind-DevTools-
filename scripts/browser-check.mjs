@@ -48,7 +48,7 @@ try {
   const home = await goto(base + "/tools");
   assert.equal(home.status(), 200);
   await page.getByRole("heading", { name: /常用工具，.*刚刚好。/ }).waitFor();
-  assert.equal(await page.locator(".tool-card").count(), 6);
+  assert.equal(await page.locator(".tool-card").count(), 10);
   await page.getByRole("textbox", { name: "搜索工具" }).fill("jwt");
   assert.equal(await page.locator(".tool-card").count(), 1);
   await page.getByRole("textbox", { name: "搜索工具" }).fill("");
@@ -253,7 +253,7 @@ try {
   await page.unroute("**/assets/worker-*.js");
   assert.deepEqual(errors, []);
   console.log(
-    "Browser checks passed: 5 tools, input invalidation, JSON precision, privacy, mobile overflow, DST, 404, cancellation and timeout.",
+    "Browser checks passed: 10-tool directory, core tool flows, input invalidation, JSON precision, privacy, mobile overflow, DST, 404, cancellation and timeout.",
   );
 } finally {
   await browser.close();
