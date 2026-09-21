@@ -245,6 +245,41 @@ try {
     "mobile settings attach to bottom",
   );
   await page.getByRole("button", { name: "关闭外观设置", exact: true }).click();
+  // Choosing a language preserves code; only explicit sample loading replaces it.
+  await page.setViewportSize({ width: 1440, height: 1050 });
+  await chooseLanguage("python");
+  const beforeLanguageChange = await (await field("代码")).innerText();
+  await chooseLanguage("java");
+  await ready();
+  assert.equal(await (await field("代码")).innerText(), beforeLanguageChange);
+  await page.getByRole("button", { name: "加载示例", exact: true }).click();
+  await page.getByRole("button", { name: "取消", exact: true }).click();
+  assert.equal(await (await field("代码")).innerText(), beforeLanguageChange);
+  await page.getByRole("button", { name: "加载示例", exact: true }).click();
+  await page.getByRole("button", { name: "替换", exact: true }).click();
+  await ready();
+  assert.ok(
+    (await (await field("代码")).innerText()).includes("public class Welcome"),
+  );
+  await chooseLanguage("go");
+  assert.ok(
+    (await (await field("代码")).innerText()).includes("public class Welcome"),
+  );
+  await page.getByRole("button", { name: "清空", exact: true }).click();
+  await page.getByRole("button", { name: "加载示例", exact: true }).click();
+  await ready();
+  assert.ok((await (await field("代码")).innerText()).includes("package main"));
+  for (const [id, snippet] of [
+    ["vue", "<script setup>"],
+    ["tsx", "type WelcomeProps"],
+    ["powershell", "$tools ="],
+  ]) {
+    await chooseLanguage(id);
+    await page.getByRole("button", { name: "加载示例", exact: true }).click();
+    await page.getByRole("button", { name: "替换", exact: true }).click();
+    await ready();
+    assert.ok((await (await field("代码")).innerText()).includes(snippet));
+  }
   assert.deepEqual(errors, []);
   console.log(
     "Code image checks passed: live preview, PNG bytes/dimensions, scaling, alpha, colors, clipboard, limits, privacy and mobile.",

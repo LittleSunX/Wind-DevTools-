@@ -1,3 +1,4 @@
+import { sampleForLanguage } from "../utils/code-samples";
 import CanvasSettings from "./CanvasSettings";
 import { readPreferences, writePreferences } from "../utils/canvas-preferences";
 import CanvasPopover from "./CanvasPopover";
@@ -321,7 +322,9 @@ export default function CodeImage() {
             <div>
               <button
                 onClick={() =>
-                  code ? setReplace(true) : changeCode(sampleCode)
+                  code
+                    ? setReplace(true)
+                    : changeCode(sampleForLanguage(language))
                 }
                 disabled={exporting}
               >
@@ -334,8 +337,10 @@ export default function CodeImage() {
           </div>
           {replace && (
             <div className="replace-prompt">
-              替换当前代码？
-              <button onClick={() => changeCode(sampleCode)}>替换</button>
+              用当前语言的示例替换代码？
+              <button onClick={() => changeCode(sampleForLanguage(language))}>
+                替换
+              </button>
               <button onClick={() => setReplace(false)}>取消</button>
             </div>
           )}
