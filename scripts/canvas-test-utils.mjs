@@ -1,5 +1,5 @@
 import { expect } from "@playwright/test";
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 export function canvasTools(page) {
   const download = page.getByRole("button", { name: "导出", exact: true });
   const editor = page.getByLabel("代码", { exact: true });
@@ -53,42 +53,17 @@ export function canvasTools(page) {
   async function png(path) {
     await close();
     await ready();
-    await page.evaluate(() => {
-      if (!window.__windDownloadCaptureInstalled) {
-        const original = HTMLAnchorElement.prototype.click;
-        HTMLAnchorElement.prototype.click = function () {
-          if (this.download && this.href.startsWith("blob:")) {
-            const href = this.href;
-            const name = this.download;
-            window.__windCapturedDownload = fetch(href).then(
-              async (response) => {
-                const bytes = new Uint8Array(await response.arrayBuffer());
-                let binary = "";
-                const chunk = 0x8000;
-                for (let i = 0; i < bytes.length; i += chunk)
-                  binary += String.fromCharCode(
-                    ...bytes.subarray(i, i + chunk),
-                  );
-                return { name, base64: btoa(binary) };
-              },
-            );
-          }
-          return original.call(this);
-        };
-        window.__windDownloadCaptureInstalled = true;
-      }
-      window.__windCapturedDownload = null;
-    });
     const panel = await openPopover(download);
+    const downloadEvent = page.waitForEvent("download");
     await panel.getByRole("button", { name: "下载 PNG", exact: true }).click();
-    await expect
-      .poll(() => page.evaluate(() => Boolean(window.__windCapturedDownload)))
-      .toBe(true);
-    const captured = await page.evaluate(() => window.__windCapturedDownload);
-    const bytes = Buffer.from(captured.base64, "base64");
+    const file = await downloadEvent;
+    const tempPath = await file.path();
+    if (!tempPath) throw new Error("PNG download path unavailable");
+    const bytes = await readFile(tempPath);
     await writeFile(path, bytes);
-    return { bytes, name: captured.name };
+    return { bytes, name: file.suggestedFilename() };
   }
+
   async function dimensions() {
     return artwork.evaluate((el) => ({
       w: el.offsetWidth,
