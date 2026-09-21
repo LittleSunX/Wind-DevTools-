@@ -23,7 +23,7 @@ function decodeBase64Utf8(input: string) {
 
 export function codecTool(input: string, options: Options) {
   const codec = options.codec === "url" ? "url" : "base64";
-  const direction = options.direction === "decode" ? "decode" : "encode";
+  const direction = options.codecDirection === "decode" ? "decode" : "encode";
   if (codec === "url") {
     try {
       return direction === "encode"
