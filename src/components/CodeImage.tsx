@@ -24,6 +24,8 @@ import {
   validateCode,
   languages,
   languageGroups,
+  parseHighlightedLines,
+  aspectRatioValue,
   type ImageOptions,
   type Segment,
 } from "../utils/code-image";
@@ -62,6 +64,12 @@ export default function CodeImage() {
   const theme = themes[options.theme] || themes.night;
   const highlighted = tokens?.code === code && tokens.language === language;
   const segments = highlighted ? tokens.segments : [{ text: code, type: "" }];
+  const lineCount = code ? code.split(/\r\n|\r|\n/).length : 1;
+  const highlightedLines = parseHighlightedLines(
+    options.highlightLines,
+    options.startLine,
+    lineCount,
+  );
   useEffect(() => {
     let nextOptions = { ...defaults };
     try {
@@ -235,11 +243,13 @@ export default function CodeImage() {
       ? "transparent"
       : options.background === "solid"
         ? options.color
-        : options.background === "sunset"
-          ? "linear-gradient(135deg, #f4b8a5, #ba9cdf)"
-          : options.background === "slate"
-            ? "linear-gradient(135deg, #dce3ef, #a8b8d0)"
-            : "linear-gradient(135deg, #8ea9ef, #b8a2e6)";
+        : options.background === "custom-gradient"
+          ? `linear-gradient(${options.gradientAngle}deg, ${options.gradientStart}, ${options.gradientEnd})`
+          : options.background === "sunset"
+            ? "linear-gradient(135deg, #f4b8a5, #ba9cdf)"
+            : options.background === "slate"
+              ? "linear-gradient(135deg, #dce3ef, #a8b8d0)"
+              : "linear-gradient(135deg, #8ea9ef, #b8a2e6)";
   function update<K extends keyof ImageOptions>(
     key: K,
     value: ImageOptions[K],
@@ -608,6 +618,7 @@ export default function CodeImage() {
                     ? Math.max(320, Math.min(2400, options.width))
                     : autoWidth,
                 background,
+                aspectRatio: aspectRatioValue(options.aspectRatio),
                 transform: `scale(${displayScale})`,
                 font: canvasFont(options),
                 fontVariantLigatures: "none",
@@ -638,13 +649,18 @@ export default function CodeImage() {
                 overflow: "hidden",
               }}
             >
-              {options.windowBar && (
-                <div className="canvas-windowbar">
-                  <div className="canvas-window-dots" aria-hidden="true">
-                    <span />
-                    <span />
-                    <span />
-                  </div>
+              {options.windowBar && options.windowStyle !== "none" && (
+                <div className={`canvas-windowbar style-${options.windowStyle}`}>
+                  {options.windowStyle === "mac" && (
+                    <div className="canvas-window-dots" aria-hidden="true">
+                      <span />
+                      <span />
+                      <span />
+                    </div>
+                  )}
+                  {options.windowStyle === "minimal" && (
+                    <div className="canvas-window-minimal" aria-hidden="true">•••</div>
+                  )}
                   <div className="canvas-title" style={{ color: theme.muted }}>
                     <span aria-hidden="true">{options.title || "\u00a0"}</span>
                     <input
@@ -659,13 +675,18 @@ export default function CodeImage() {
                   </div>
                 </div>
               )}
-              <div className="canvas-code-padding">
+              <div
+                className="canvas-code-padding"
+                style={{ padding: options.codePadding }}
+              >
                 <CanvasCode
                   code={code}
                   segments={segments}
                   colors={theme.colors}
                   muted={theme.muted}
                   lineNumbers={options.lineNumbers}
+                  startLine={options.startLine}
+                  highlightedLines={highlightedLines}
                   wrap={options.widthMode === "fixed" && options.wrap}
                   readOnly={exporting}
                   onChange={changeCode}
