@@ -484,8 +484,12 @@
   .canvas-export-actions .shot-field {
     margin-right: auto;
   }
+  .canvas-utility {
+    flex-wrap: wrap;
+  }
   .canvas-utility > span {
-    max-width: 55%;
+    width: 100%;
+    max-width: none;
     line-height: 1.6;
   }
   .canvas-stage {
