@@ -334,7 +334,7 @@ export default function CodeImage() {
     try {
       if (!navigator.clipboard?.write || typeof ClipboardItem === "undefined")
         throw new Error("当前浏览器不支持复制图片，请下载 PNG。");
-      const blob = await exportCanvas(artwork.current, options);
+      const blob = exportCanvas(artwork.current, options);
       await navigator.clipboard.write([
         new ClipboardItem({ "image/png": blob }),
       ]);
@@ -431,7 +431,10 @@ export default function CodeImage() {
       const link = document.createElement("a");
       link.href = url;
       link.download = imageFilename();
+      link.style.display = "none";
+      document.body.append(link);
       link.click();
+      link.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       setNotice("PNG 已生成。");
       trackTool("code-image", "export", "success");
@@ -454,7 +457,10 @@ export default function CodeImage() {
       const link = document.createElement("a");
       link.href = dataUrl;
       link.download = imageFilename(new Date(), "svg");
+      link.style.display = "none";
+      document.body.append(link);
       link.click();
+      link.remove();
       setNotice("SVG 已生成。");
       trackTool("code-image", "export_svg", "success");
     } catch (error) {
