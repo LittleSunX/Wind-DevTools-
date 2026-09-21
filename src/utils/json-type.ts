@@ -85,7 +85,11 @@ export function jsonTypeTool(input: string, options: Options) {
 
   if (options.target === "java") {
     const defs = new Map<string, string>();
-    const rootType = javaType(value, rootName, defs);
+    const rootType = javaType(
+      value,
+      Array.isArray(value) ? `${rootName}Item` : rootName,
+      defs,
+    );
     if (
       typeof value === "object" &&
       value !== null &&
@@ -106,7 +110,11 @@ export function jsonTypeTool(input: string, options: Options) {
   }
 
   const defs = new Map<string, string>();
-  const rootType = tsType(value, rootName, defs);
+  const rootType = tsType(
+    value,
+    Array.isArray(value) ? `${rootName}Item` : rootName,
+    defs,
+  );
   if (
     typeof value === "object" &&
     value !== null &&
