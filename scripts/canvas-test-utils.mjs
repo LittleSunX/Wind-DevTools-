@@ -26,14 +26,15 @@ export function canvasTools(page) {
   }
   async function openPopover(trigger) {
     await close();
-    await trigger.evaluate((element) => {
+    const id = await trigger.evaluate((element) => {
       const target =
         element.popoverTargetElement ||
         document.getElementById(element.getAttribute("popovertarget"));
       if (!target) throw new Error("popover target not found");
       if (!target.matches(":popover-open")) target.showPopover();
+      return target.id;
     });
-    const panel = page.locator("[popover]:popover-open");
+    const panel = page.locator(`[id="${id}"]`);
     await expect(panel).toBeVisible();
     return panel;
   }
