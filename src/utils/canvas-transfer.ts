@@ -16,6 +16,9 @@ const transferByTool: Record<
   jwt: { language: "plain", title: "jwt.txt" },
   cron: { language: "plain", title: "cron.txt" },
   timestamp: { language: "plain", title: "timestamp.txt" },
+  codec: { language: "plain", title: "encoded.txt" },
+  text: { language: "plain", title: "text.txt" },
+  "json-type": { language: "plain", title: "types.txt" },
 };
 
 export function createCanvasTransfer(
