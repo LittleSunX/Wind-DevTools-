@@ -9,7 +9,7 @@ import CanvasSettings from "./CanvasSettings";
 import CanvasPopover from "./CanvasPopover";
 import CanvasCode from "./CanvasCode";
 import { loadCanvasFont } from "../utils/canvas-fonts";
-import { exportCanvas } from "../utils/canvas-export";
+import { exportCanvas, exportCanvasSvg } from "../utils/canvas-export";
 import { readPreferences, writePreferences } from "../utils/canvas-preferences";
 import { sampleForLanguage } from "../utils/code-samples";
 import { trackTool } from "../analytics";
@@ -45,6 +45,7 @@ export default function CodeImage() {
   const [replace, setReplace] = useState(false);
   const [languageSearch, setLanguageSearch] = useState("");
   const [zoom, setZoom] = useState("1");
+  const [settingsOpenSignal, setSettingsOpenSignal] = useState(0);
   const artwork = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const [available, setAvailable] = useState(1000);
@@ -236,6 +237,26 @@ export default function CodeImage() {
     setReplace(false);
     setNotice("");
   }
+  async function exportSvg() {
+    if (!canExport || !artwork.current || exporting) return;
+    setExporting(true);
+    setNotice("");
+    try {
+      const dataUrl = await exportCanvasSvg(artwork.current, options);
+      const link = document.createElement("a");
+      link.href = dataUrl;
+      link.download = imageFilename(new Date(), "svg");
+      link.click();
+      setNotice("SVG 已生成。");
+      trackTool("code-image", "export_svg", "success");
+    } catch (error) {
+      trackTool("code-image", "export_svg", "error");
+      setNotice(error instanceof Error ? error.message : "SVG 导出失败，请重试。");
+    } finally {
+      setExporting(false);
+    }
+  }
+
   async function exportImage(copy: boolean) {
     if (!canExport || !artwork.current || exporting) return;
     setExporting(true);
@@ -376,6 +397,10 @@ export default function CodeImage() {
           )?.name || "custom",
           [["custom", "自定义"], ...imagePresets.map((p) => [p.name, p.name])],
           (name) => {
+            if (name === "custom") {
+              setSettingsOpenSignal((value) => value + 1);
+              return;
+            }
             const preset = imagePresets.find((p) => p.name === name);
             if (!preset) return;
             setNotice("");
@@ -391,6 +416,7 @@ export default function CodeImage() {
         )}
         <CanvasPopover
           alignEnd
+          openSignal={settingsOpenSignal}
           label="外观设置"
           title="外观设置"
           disabled={exporting}
@@ -421,6 +447,12 @@ export default function CodeImage() {
             onClick={() => exportImage(true)}
           >
             复制图片
+          </button>
+          <button
+            disabled={!canExport || exporting}
+            onClick={exportSvg}
+          >
+            下载 SVG
           </button>
           <button
             className="primary"
@@ -501,6 +533,14 @@ export default function CodeImage() {
               style={{
                 background: theme.bg,
                 minWidth: options.widthMode === "fixed" ? 0 : 420,
+                borderRadius: options.windowRadius,
+                boxShadow:
+                  options.shadow === "none"
+                    ? "none"
+                    : options.shadow === "strong"
+                      ? "0 18px 42px #17203a55"
+                      : "0 10px 24px #17203a33",
+                overflow: "hidden",
               }}
             >
               {options.windowBar && (
