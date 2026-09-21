@@ -19,18 +19,19 @@ export default function DiffTool() {
   const [left, setLeft] = useState("");
   const [right, setRight] = useState("");
   const [notice, setNotice] = useState("");
-  const [error, setError] = useState("");
 
-  const lines = useMemo(() => {
-    setError("");
-    if (!left && !right) return [];
+  const comparison = useMemo(() => {
+    if (!left && !right) return { lines: [], error: "" };
     try {
-      return diffLines(left, right);
+      return { lines: diffLines(left, right), error: "" };
     } catch (err) {
-      setError(err instanceof Error ? err.message : "比较失败。");
-      return [];
+      return {
+        lines: [],
+        error: err instanceof Error ? err.message : "比较失败。",
+      };
     }
   }, [left, right]);
+  const { lines, error } = comparison;
 
   const added = lines.filter((line) => line.kind === "add").length;
   const removed = lines.filter((line) => line.kind === "remove").length;
