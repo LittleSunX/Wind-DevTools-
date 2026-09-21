@@ -26,15 +26,15 @@ export function canvasTools(page) {
   }
   async function openPopover(trigger) {
     await close();
-    const id = await trigger.evaluate((element) => {
+    const title = await trigger.evaluate((element) => {
       const target =
         element.popoverTargetElement ||
         document.getElementById(element.getAttribute("popovertarget"));
       if (!target) throw new Error("popover target not found");
-      if (!target.matches(":popover-open")) target.showPopover();
-      return target.id;
+      return target.getAttribute("aria-label") || "";
     });
-    const panel = page.locator(`[id="${id}"]`);
+    await trigger.click();
+    const panel = page.getByRole("dialog", { name: title, exact: true });
     await expect(panel).toBeVisible();
     return panel;
   }
