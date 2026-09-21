@@ -107,7 +107,8 @@ export function jsonTypeTool(input: string, options: Options) {
         .join("\n\n");
       return `import java.util.List;\n\n${root}${children ? `\n\n${children}` : ""}`;
     }
-    return `import java.util.List;\n\npublic class ${rootName} {\n    private ${rootType} value;\n}`;
+    const children = [...defs.values()].join("\n\n");
+    return `import java.util.List;\n\npublic class ${rootName} {\n    private ${rootType} value;\n}${children ? `\n\n${children}` : ""}`;
   }
 
   const defs = new Map<string, string>();
@@ -128,5 +129,6 @@ export function jsonTypeTool(input: string, options: Options) {
       .map(([, definition]) => definition);
     return [root, ...children].join("\n\n");
   }
-  return `export type ${rootName} = ${rootType};`;
+  const definitions = [...defs.values()].join("\n\n");
+  return `export type ${rootName} = ${rootType};${definitions ? `\n\n${definitions}` : ""}`;
 }
