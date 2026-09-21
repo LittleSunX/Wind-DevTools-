@@ -53,3 +53,30 @@ export async function exportCanvas(
   if (!blob) throw new Error("图片生成失败，请降低导出倍率后重试。");
   return blob;
 }
+
+
+export async function exportCanvasSvg(
+  node: HTMLElement,
+  options: ImageOptions,
+): Promise<string> {
+  const { toSvg } = await import("html-to-image");
+  const embedded = await fontCSS(options.fontFamily);
+  const width = node.offsetWidth;
+  const height = node.offsetHeight;
+  const codeSize = getComputedStyle(node).fontSize;
+  const title = node.querySelector<HTMLElement>(".canvas-title");
+  const titleSize = title ? getComputedStyle(title).fontSize : "12px";
+  const exactTypography = `.canvas-artwork, .canvas-artwork * { font-size: ${codeSize} !important; } .canvas-artwork .canvas-title, .canvas-artwork .canvas-title * { font-size: ${titleSize} !important; }`;
+  return toSvg(node, {
+    width,
+    height,
+    pixelRatio: 1,
+    fontEmbedCSS: embedded + exactTypography,
+    skipAutoScale: true,
+    filter: (element) =>
+      !(
+        element instanceof Element && element.hasAttribute("data-export-ignore")
+      ),
+    style: { transform: "none", margin: "0", boxShadow: "none" },
+  });
+}
