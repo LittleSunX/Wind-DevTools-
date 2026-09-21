@@ -141,7 +141,7 @@ for (const [name, engine] of [
       }),
     );
     const sharePanel = await openPopover(
-      page.getByRole("button", { name: "复制 / 分享", exact: true }),
+      page.getByRole("button", { name: "复制", exact: true }),
     );
     await sharePanel
       .getByRole("button", { name: "复制图片", exact: true })

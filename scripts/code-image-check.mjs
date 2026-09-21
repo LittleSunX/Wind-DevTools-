@@ -39,6 +39,20 @@ try {
     await page.locator(".shot-layout, .shot-preview-stage").count(),
     0,
   );
+  await (await field("风格")).selectOption("午夜蓝");
+  await (await field("字号")).selectOption("24");
+  await close();
+  await expect(page.getByLabel("风格", { exact: true })).toHaveValue("custom");
+  await expect(
+    page.getByLabel("风格", { exact: true }).locator('option[value="custom"]'),
+  ).toHaveJSProperty("disabled", true);
+  for (let i = 0; i < 2; i++) {
+    await openPopover(
+      page.getByRole("button", { name: "外观设置", exact: true }),
+    );
+    await close();
+  }
+  await (await field("风格")).selectOption("午夜蓝");
   await scale(1);
   await ready();
   // Use an integer origin for raster comparison; small glyph antialias differences are allowed.
@@ -99,8 +113,16 @@ try {
       0.001,
   );
   const sharePanel = await openPopover(
-    page.getByRole("button", { name: "复制 / 分享", exact: true }),
+    page.getByRole("button", { name: "复制", exact: true }),
   );
+  await expect(
+    sharePanel.getByRole("button", { name: "复制 PNG Base64", exact: true }),
+  ).toBeHidden();
+  await sharePanel.getByText("高级复制", { exact: true }).click();
+  await expect(
+    sharePanel.getByRole("button", { name: "复制 PNG Base64", exact: true }),
+  ).toBeVisible();
+  await sharePanel.getByText("高级复制", { exact: true }).click();
   await sharePanel
     .getByRole("button", { name: "复制图片", exact: true })
     .click();
@@ -110,6 +132,34 @@ try {
       (await navigator.clipboard.read())[0].types.includes("image/png"),
     ),
   );
+  for (const [name, message, pattern] of [
+    ["复制 SVG 源码", "SVG 源码已复制", /^<svg/],
+    ["复制 PNG Data URL", "PNG Data URL 已复制", /^data:image\/png;base64,/],
+    ["复制 PNG Base64", "PNG Base64 已复制", /^iVBOR/],
+  ]) {
+    const panel = await openPopover(
+      page.getByRole("button", { name: "复制", exact: true }),
+    );
+    if (!(await panel.locator("details").evaluate((el) => el.open))) {
+      await panel.getByText("高级复制", { exact: true }).click();
+    }
+    await panel.getByRole("button", { name, exact: true }).click();
+    await page.getByRole("status").filter({ hasText: message }).waitFor();
+    assert.match(
+      await page.evaluate(() => navigator.clipboard.readText()),
+      pattern,
+    );
+  }
+  const exportPanel = await openPopover(download);
+  const svgDownload = page.waitForEvent("download");
+  await exportPanel
+    .getByRole("button", { name: "下载 SVG", exact: true })
+    .click();
+  assert.match(
+    (await svgDownload).suggestedFilename(),
+    /^wind-code-\d{8}-\d{6}-\d{3}\.svg$/,
+  );
+  await ready();
   await (await field("背景")).selectOption("transparent");
   await ready();
   const transparent = await png("artifacts/canvas-transparent.png");

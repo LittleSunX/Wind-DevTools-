@@ -9,23 +9,15 @@ import CanvasSettings from "./CanvasSettings";
 import CanvasPopover from "./CanvasPopover";
 import CanvasCode from "./CanvasCode";
 import { loadCanvasFont } from "../utils/canvas-fonts";
-import {
-  blobToDataUrl,
-  dataUrlToBase64,
-  exportCanvas,
-  exportCanvasSvg,
-  exportCanvasSvgSource,
-} from "../utils/canvas-export";
 import { readPreferences, writePreferences } from "../utils/canvas-preferences";
 import { readCanvasTransfer } from "../utils/canvas-transfer";
 import { sampleForLanguage } from "../utils/code-samples";
-import { trackTool } from "../analytics";
+import CanvasActions from "./CanvasActions";
 import {
   canvasFont,
   defaults,
   themes,
   imagePresets,
-  imageFilename,
   sampleCode,
   validateCode,
   languages,
@@ -55,7 +47,6 @@ export default function CodeImage() {
   const [languageSearch, setLanguageSearch] = useState("");
   const [zoom, setZoom] = useState("1");
   const [draggingFile, setDraggingFile] = useState(false);
-  const settingsTrigger = useRef<HTMLButtonElement>(null);
   const artwork = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const [available, setAvailable] = useState(1000);
@@ -323,156 +314,6 @@ export default function CodeImage() {
       );
     }
   }
-  function hideActionMenu(target: HTMLElement) {
-    target.closest<HTMLElement>("[popover]")?.hidePopover();
-  }
-
-  async function copyImage() {
-    if (!canExport || !artwork.current || exporting) return;
-    setExporting(true);
-    setNotice("");
-    try {
-      if (!navigator.clipboard?.write || typeof ClipboardItem === "undefined")
-        throw new Error("当前浏览器不支持复制图片，请下载 PNG。");
-      const blob = exportCanvas(artwork.current, options);
-      await navigator.clipboard.write([
-        new ClipboardItem({ "image/png": blob }),
-      ]);
-      setNotice("图片已复制，可以粘贴到支持图片的应用。");
-      trackTool("code-image", "copy_image", "success");
-    } catch {
-      trackTool("code-image", "copy_image", "error");
-      setNotice("复制失败或未获剪贴板权限，请使用「下载 PNG」。");
-    } finally {
-      setExporting(false);
-    }
-  }
-
-  async function copySvgSource() {
-    if (!canExport || !artwork.current || exporting) return;
-    setExporting(true);
-    setNotice("");
-    try {
-      const source = await exportCanvasSvgSource(artwork.current, options);
-      await navigator.clipboard.writeText(source);
-      setNotice("SVG 源码已复制。");
-      trackTool("code-image", "copy_svg", "success");
-    } catch (error) {
-      trackTool("code-image", "copy_svg", "error");
-      setNotice(
-        error instanceof Error ? error.message : "SVG 源码复制失败，请重试。",
-      );
-    } finally {
-      setExporting(false);
-    }
-  }
-
-  async function copyPngText(mode: "data-url" | "base64") {
-    if (!canExport || !artwork.current || exporting) return;
-    setExporting(true);
-    setNotice("");
-    const action = mode === "data-url" ? "copy_data_url" : "copy_base64";
-    try {
-      const blob = await exportCanvas(artwork.current, options);
-      const dataUrl = await blobToDataUrl(blob);
-      await navigator.clipboard.writeText(
-        mode === "data-url" ? dataUrl : dataUrlToBase64(dataUrl),
-      );
-      setNotice(
-        mode === "data-url" ? "PNG Data URL 已复制。" : "PNG Base64 已复制。",
-      );
-      trackTool("code-image", action, "success");
-    } catch (error) {
-      trackTool("code-image", action, "error");
-      setNotice(
-        error instanceof Error ? error.message : "复制失败，请检查剪贴板权限。",
-      );
-    } finally {
-      setExporting(false);
-    }
-  }
-
-  async function openPngPreview() {
-    if (!canExport || !artwork.current || exporting) return;
-    const preview = window.open("", "_blank");
-    if (!preview) {
-      setNotice("新标签页被浏览器拦截，请允许弹出窗口后重试。");
-      trackTool("code-image", "open_image", "error");
-      return;
-    }
-    preview.opener = null;
-    setExporting(true);
-    setNotice("");
-    try {
-      const blob = await exportCanvas(artwork.current, options);
-      const url = URL.createObjectURL(blob);
-      preview.location.href = url;
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
-      setNotice("已在新标签页打开 PNG。");
-      trackTool("code-image", "open_image", "success");
-    } catch (error) {
-      preview.close();
-      trackTool("code-image", "open_image", "error");
-      setNotice(
-        error instanceof Error ? error.message : "无法打开图片，请重试。",
-      );
-    } finally {
-      setExporting(false);
-    }
-  }
-
-  async function downloadPng() {
-    if (!canExport || !artwork.current || exporting) return;
-    setExporting(true);
-    setNotice("");
-    try {
-      const blob = await exportCanvas(artwork.current, options);
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = imageFilename();
-      link.style.display = "none";
-      document.body.append(link);
-      link.click();
-      link.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-      setNotice("PNG 已生成。");
-      trackTool("code-image", "export", "success");
-    } catch (error) {
-      trackTool("code-image", "export", "error");
-      setNotice(
-        error instanceof Error ? error.message : "PNG 导出失败，请重试。",
-      );
-    } finally {
-      setExporting(false);
-    }
-  }
-
-  async function downloadSvg() {
-    if (!canExport || !artwork.current || exporting) return;
-    setExporting(true);
-    setNotice("");
-    try {
-      const dataUrl = await exportCanvasSvg(artwork.current, options);
-      const link = document.createElement("a");
-      link.href = dataUrl;
-      link.download = imageFilename(new Date(), "svg");
-      link.style.display = "none";
-      document.body.append(link);
-      link.click();
-      link.remove();
-      setNotice("SVG 已生成。");
-      trackTool("code-image", "export_svg", "success");
-    } catch (error) {
-      trackTool("code-image", "export_svg", "error");
-      setNotice(
-        error instanceof Error ? error.message : "SVG 导出失败，请重试。",
-      );
-    } finally {
-      setExporting(false);
-    }
-  }
-
   const select = (
     label: string,
     value: string,
@@ -488,7 +329,11 @@ export default function CodeImage() {
         disabled={exporting}
       >
         {items.map(([v, l]) => (
-          <option key={v} value={v}>
+          <option
+            key={v}
+            value={v}
+            disabled={label === "风格" && v === "custom"}
+          >
             {l}
           </option>
         ))}
@@ -581,10 +426,6 @@ export default function CodeImage() {
           )?.name || "custom",
           [["custom", "自定义"], ...imagePresets.map((p) => [p.name, p.name])],
           (name) => {
-            if (name === "custom") {
-              requestAnimationFrame(() => settingsTrigger.current?.click());
-              return;
-            }
             const preset = imagePresets.find((p) => p.name === name);
             if (!preset) return;
             setNotice("");
@@ -609,7 +450,6 @@ export default function CodeImage() {
         )}
         <CanvasPopover
           alignEnd
-          triggerRef={settingsTrigger}
           label="外观设置"
           title="外观设置"
           disabled={exporting}
@@ -624,125 +464,15 @@ export default function CodeImage() {
           />
         </CanvasPopover>
 
-        <div className="canvas-export-actions">
-          <CanvasPopover
-            alignEnd
-            label="复制 / 分享"
-            title="复制 / 分享"
-            disabled={!canExport || exporting}
-          >
-            <div className="canvas-action-menu">
-              <button
-                type="button"
-                aria-label="复制图片"
-                onClick={(event) => {
-                  hideActionMenu(event.currentTarget);
-                  void copyImage();
-                }}
-              >
-                <span>复制图片</span>
-                <small>PNG</small>
-              </button>
-              <button
-                type="button"
-                aria-label="复制 SVG 源码"
-                onClick={(event) => {
-                  hideActionMenu(event.currentTarget);
-                  void copySvgSource();
-                }}
-              >
-                <span>复制 SVG 源码</span>
-                <small>SVG</small>
-              </button>
-              <button
-                type="button"
-                aria-label="复制 PNG Data URL"
-                onClick={(event) => {
-                  hideActionMenu(event.currentTarget);
-                  void copyPngText("data-url");
-                }}
-              >
-                <span>复制 PNG Data URL</span>
-                <small>data:image/png</small>
-              </button>
-              <button
-                type="button"
-                aria-label="复制 PNG Base64"
-                onClick={(event) => {
-                  hideActionMenu(event.currentTarget);
-                  void copyPngText("base64");
-                }}
-              >
-                <span>复制 PNG Base64</span>
-                <small>纯 Base64</small>
-              </button>
-              <button
-                type="button"
-                aria-label="在新标签页打开"
-                onClick={(event) => {
-                  hideActionMenu(event.currentTarget);
-                  void openPngPreview();
-                }}
-              >
-                <span>在新标签页打开</span>
-                <small>PNG 预览</small>
-              </button>
-            </div>
-          </CanvasPopover>
-
-          <CanvasPopover
-            alignEnd
-            label={exporting ? "正在导出…" : "导出"}
-            title="导出"
-            disabled={!canExport || exporting}
-          >
-            <div className="canvas-export-menu">
-              <div
-                className="canvas-export-scale"
-                role="group"
-                aria-label="PNG 导出倍率"
-              >
-                <span>PNG 导出倍率</span>
-                <div>
-                  {[1, 2, 3].map((scale) => (
-                    <button
-                      type="button"
-                      key={scale}
-                      aria-pressed={options.scale === scale}
-                      onClick={() => update("scale", scale)}
-                    >
-                      {scale}×
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="canvas-action-menu">
-                <button
-                  type="button"
-                  aria-label="下载 PNG"
-                  onClick={(event) => {
-                    hideActionMenu(event.currentTarget);
-                    void downloadPng();
-                  }}
-                >
-                  <span>下载 PNG</span>
-                  <small>{options.scale}×</small>
-                </button>
-                <button
-                  type="button"
-                  aria-label="下载 SVG"
-                  onClick={(event) => {
-                    hideActionMenu(event.currentTarget);
-                    void downloadSvg();
-                  }}
-                >
-                  <span>下载 SVG</span>
-                  <small>矢量 · 不受倍率影响</small>
-                </button>
-              </div>
-            </div>
-          </CanvasPopover>
-        </div>
+        <CanvasActions
+          artwork={artwork}
+          options={options}
+          canExport={canExport}
+          exporting={exporting}
+          setExporting={setExporting}
+          setNotice={setNotice}
+          update={update}
+        />
       </div>
       <div className="canvas-utility">
         <span id="canvas-help">

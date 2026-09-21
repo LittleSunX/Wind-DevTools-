@@ -24,11 +24,7 @@ function fontCSS(id: string) {
   embeddedFonts.set(font.id, pending);
   return pending;
 }
-export async function exportCanvas(
-  node: HTMLElement,
-  options: ImageOptions,
-): Promise<Blob> {
-  const { toBlob } = await import("html-to-image");
+async function exportOptions(node: HTMLElement, options: ImageOptions) {
   const embedded = await fontCSS(options.fontFamily);
   const width = node.offsetWidth,
     height = node.offsetHeight;
@@ -38,17 +34,27 @@ export async function exportCanvas(
   const title = node.querySelector<HTMLElement>(".canvas-title");
   const titleSize = title ? getComputedStyle(title).fontSize : "12px";
   const exactTypography = `.canvas-artwork, .canvas-artwork * { font-size: ${codeSize} !important; } .canvas-artwork .canvas-title, .canvas-artwork .canvas-title * { font-size: ${titleSize} !important; }`;
-  const blob = await toBlob(node, {
+  return {
     width,
     height,
-    pixelRatio: options.scale,
     fontEmbedCSS: embedded + exactTypography,
     skipAutoScale: true,
-    filter: (element) =>
+    filter: (element: HTMLElement) =>
       !(
         element instanceof Element && element.hasAttribute("data-export-ignore")
       ),
     style: { transform: "none", margin: "0", boxShadow: "none" },
+  };
+}
+
+export async function exportCanvas(
+  node: HTMLElement,
+  options: ImageOptions,
+): Promise<Blob> {
+  const { toBlob } = await import("html-to-image");
+  const blob = await toBlob(node, {
+    ...(await exportOptions(node, options)),
+    pixelRatio: options.scale,
   });
   if (!blob) throw new Error("图片生成失败，请降低导出倍率后重试。");
   return blob;
@@ -59,24 +65,9 @@ export async function exportCanvasSvg(
   options: ImageOptions,
 ): Promise<string> {
   const { toSvg } = await import("html-to-image");
-  const embedded = await fontCSS(options.fontFamily);
-  const width = node.offsetWidth;
-  const height = node.offsetHeight;
-  const codeSize = getComputedStyle(node).fontSize;
-  const title = node.querySelector<HTMLElement>(".canvas-title");
-  const titleSize = title ? getComputedStyle(title).fontSize : "12px";
-  const exactTypography = `.canvas-artwork, .canvas-artwork * { font-size: ${codeSize} !important; } .canvas-artwork .canvas-title, .canvas-artwork .canvas-title * { font-size: ${titleSize} !important; }`;
   return toSvg(node, {
-    width,
-    height,
+    ...(await exportOptions(node, options)),
     pixelRatio: 1,
-    fontEmbedCSS: embedded + exactTypography,
-    skipAutoScale: true,
-    filter: (element) =>
-      !(
-        element instanceof Element && element.hasAttribute("data-export-ignore")
-      ),
-    style: { transform: "none", margin: "0", boxShadow: "none" },
   });
 }
 
