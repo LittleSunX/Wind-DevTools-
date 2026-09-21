@@ -178,7 +178,7 @@ export default function CodeImage() {
             ruler.offsetWidth +
               1 +
               (options.lineNumbers ? (gutter?.offsetWidth || 0) + 24 : 0) +
-              56,
+              options.codePadding * 2,
           ) +
             options.padding * 2,
         );
