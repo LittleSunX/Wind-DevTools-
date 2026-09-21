@@ -2,8 +2,10 @@ export type DiffKind = "same" | "add" | "remove";
 export type DiffLine = { kind: DiffKind; text: string; left?: number; right?: number };
 
 export function diffLines(leftText: string, rightText: string): DiffLine[] {
-  const left = leftText.replace(/\r\n?/g, "\n").split("\n");
-  const right = rightText.replace(/\r\n?/g, "\n").split("\n");
+  const split = (value: string) =>
+    value === "" ? [] : value.replace(/\r\n?/g, "\n").split("\n");
+  const left = split(leftText);
+  const right = split(rightText);
   if (left.length > 1200 || right.length > 1200)
     throw new Error("Diff 单侧最多支持 1,200 行，请拆分后比较。");
 
