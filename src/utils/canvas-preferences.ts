@@ -7,7 +7,7 @@ export function sanitizePreferences(value: unknown): Partial<ImageOptions> {
   const result: Record<string, unknown> = {};
   const enums: Record<string, readonly unknown[]> = {
     theme: ["night", "graphite", "light", "forest", "paper"],
-    background: ["blue", "sunset", "slate", "solid", "transparent"],
+    background: ["blue", "sunset", "slate", "solid", "custom-gradient", "transparent"],
     fontFamily: ["jetbrains", "source", "system"],
     lineHeight: [1.4, 1.65, 1.9],
     fontSize: [14, 16, 18, 20, 24],
