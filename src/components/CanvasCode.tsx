@@ -32,8 +32,9 @@ export default function CanvasCode({
   const escapeTab = useRef(false);
   // Preserve tabs: both layers use the same tab-size rather than changing source text.
   const lines = splitSegments(segments);
+  const lastLineNumber = startLine + Math.max(0, lines.length - 1);
   const gutter = lineNumbers
-    ? `${Math.max(2, String(lines.length).length)}ch`
+    ? `${Math.max(2, String(lastLineNumber).length)}ch`
     : "0px";
   function search() {
     if (!query || !input.current) return;
