@@ -16,6 +16,14 @@ export type ImageOptions = {
   wrap: boolean;
   windowRadius: number;
   shadow: "none" | "soft" | "strong";
+  windowStyle: "mac" | "minimal" | "title" | "none";
+  codePadding: number;
+  startLine: number;
+  highlightLines: string;
+  aspectRatio: "free" | "1:1" | "4:3" | "16:9" | "1.91:1";
+  gradientStart: string;
+  gradientEnd: string;
+  gradientAngle: number;
 };
 export const canvasFonts = [
   {
@@ -115,6 +123,14 @@ export const imagePresets = [
     background: "blue",
     padding: 48,
     fontSize: 18,
+    fontFamily: "jetbrains",
+    lineHeight: 1.65,
+    codePadding: 28,
+    lineNumbers: true,
+    windowStyle: "mac",
+    windowRadius: 12,
+    shadow: "soft",
+    aspectRatio: "free",
   },
   {
     name: "暖日落",
@@ -122,6 +138,14 @@ export const imagePresets = [
     background: "sunset",
     padding: 48,
     fontSize: 18,
+    fontFamily: "jetbrains",
+    lineHeight: 1.65,
+    codePadding: 28,
+    lineNumbers: true,
+    windowStyle: "mac",
+    windowRadius: 18,
+    shadow: "strong",
+    aspectRatio: "free",
   },
   {
     name: "极简白",
@@ -129,6 +153,14 @@ export const imagePresets = [
     background: "slate",
     padding: 32,
     fontSize: 16,
+    fontFamily: "source",
+    lineHeight: 1.4,
+    codePadding: 24,
+    lineNumbers: false,
+    windowStyle: "title",
+    windowRadius: 8,
+    shadow: "soft",
+    aspectRatio: "free",
   },
   {
     name: "透明底",
@@ -136,6 +168,14 @@ export const imagePresets = [
     background: "transparent",
     padding: 32,
     fontSize: 18,
+    fontFamily: "jetbrains",
+    lineHeight: 1.65,
+    codePadding: 28,
+    lineNumbers: true,
+    windowStyle: "minimal",
+    windowRadius: 12,
+    shadow: "none",
+    aspectRatio: "free",
   },
   {
     name: "静谧松林",
@@ -143,6 +183,14 @@ export const imagePresets = [
     background: "slate",
     padding: 48,
     fontSize: 18,
+    fontFamily: "source",
+    lineHeight: 1.65,
+    codePadding: 32,
+    lineNumbers: true,
+    windowStyle: "mac",
+    windowRadius: 12,
+    shadow: "soft",
+    aspectRatio: "4:3",
   },
   {
     name: "暖纸手记",
@@ -150,9 +198,17 @@ export const imagePresets = [
     background: "solid",
     padding: 48,
     fontSize: 18,
+    fontFamily: "source",
+    lineHeight: 1.9,
+    codePadding: 32,
+    lineNumbers: false,
+    windowStyle: "title",
+    windowRadius: 8,
+    shadow: "soft",
+    aspectRatio: "4:3",
     color: "#e7dfd1",
   },
-];
+] as const;
 export const themeChoices = [
   ["night", "午夜蓝"],
   ["graphite", "石墨黑"],
@@ -177,7 +233,69 @@ export const defaults: ImageOptions = {
   wrap: true,
   windowRadius: 12,
   shadow: "soft",
+  windowStyle: "mac",
+  codePadding: 28,
+  startLine: 1,
+  highlightLines: "",
+  aspectRatio: "free",
+  gradientStart: "#8ea9ef",
+  gradientEnd: "#b8a2e6",
+  gradientAngle: 135,
 };
+export function parseHighlightedLines(
+  value: string,
+  startLine: number,
+  lineCount: number,
+) {
+  const result = new Set<number>();
+  const text = value.trim();
+  if (!text) return result;
+  const lastLine = startLine + Math.max(0, lineCount - 1);
+  for (const part of text.split(",")) {
+    const token = part.trim();
+    if (!token) continue;
+    const range = token.match(/^(\d+)-(\d+)$/);
+    if (range) {
+      const start = Number(range[1]);
+      const end = Number(range[2]);
+      if (
+        !Number.isInteger(start) ||
+        !Number.isInteger(end) ||
+        start < 1 ||
+        end < start
+      )
+        continue;
+      for (
+        let line = Math.max(start, startLine);
+        line <= Math.min(end, lastLine);
+        line++
+      )
+        result.add(line);
+      continue;
+    }
+    if (/^\d+$/.test(token)) {
+      const line = Number(token);
+      if (line >= startLine && line <= lastLine) result.add(line);
+    }
+  }
+  return result;
+}
+
+export function aspectRatioValue(value: ImageOptions["aspectRatio"]) {
+  switch (value) {
+    case "1:1":
+      return "1 / 1";
+    case "4:3":
+      return "4 / 3";
+    case "16:9":
+      return "16 / 9";
+    case "1.91:1":
+      return "1.91 / 1";
+    default:
+      return undefined;
+  }
+}
+
 export function validateCode(code: string) {
   if (!code.trim()) throw new Error("请输入代码，或加载示例。");
   if (code.length > 12000)

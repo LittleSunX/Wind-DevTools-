@@ -29,7 +29,10 @@ self.onmessage = async (
         result = (await import("./utils/codec")).codecTool(input, options);
         break;
       case "json-type":
-        result = (await import("./utils/json-type")).jsonTypeTool(input, options);
+        result = (await import("./utils/json-type")).jsonTypeTool(
+          input,
+          options,
+        );
         break;
       case "text":
         result = (await import("./utils/text")).textTool(input, options);

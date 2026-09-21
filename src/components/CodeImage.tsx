@@ -9,7 +9,13 @@ import CanvasSettings from "./CanvasSettings";
 import CanvasPopover from "./CanvasPopover";
 import CanvasCode from "./CanvasCode";
 import { loadCanvasFont } from "../utils/canvas-fonts";
-import { exportCanvas, exportCanvasSvg } from "../utils/canvas-export";
+import {
+  blobToDataUrl,
+  dataUrlToBase64,
+  exportCanvas,
+  exportCanvasSvg,
+  exportCanvasSvgSource,
+} from "../utils/canvas-export";
 import { readPreferences, writePreferences } from "../utils/canvas-preferences";
 import { readCanvasTransfer } from "../utils/canvas-transfer";
 import { sampleForLanguage } from "../utils/code-samples";
@@ -24,6 +30,8 @@ import {
   validateCode,
   languages,
   languageGroups,
+  parseHighlightedLines,
+  aspectRatioValue,
   type ImageOptions,
   type Segment,
 } from "../utils/code-image";
@@ -62,6 +70,12 @@ export default function CodeImage() {
   const theme = themes[options.theme] || themes.night;
   const highlighted = tokens?.code === code && tokens.language === language;
   const segments = highlighted ? tokens.segments : [{ text: code, type: "" }];
+  const lineCount = code ? code.split(/\r\n|\r|\n/).length : 1;
+  const highlightedLines = parseHighlightedLines(
+    options.highlightLines,
+    options.startLine,
+    lineCount,
+  );
   useEffect(() => {
     let nextOptions = { ...defaults };
     try {
@@ -170,7 +184,7 @@ export default function CodeImage() {
             ruler.offsetWidth +
               1 +
               (options.lineNumbers ? (gutter?.offsetWidth || 0) + 24 : 0) +
-              56,
+              options.codePadding * 2,
           ) +
             options.padding * 2,
         );
@@ -235,11 +249,13 @@ export default function CodeImage() {
       ? "transparent"
       : options.background === "solid"
         ? options.color
-        : options.background === "sunset"
-          ? "linear-gradient(135deg, #f4b8a5, #ba9cdf)"
-          : options.background === "slate"
-            ? "linear-gradient(135deg, #dce3ef, #a8b8d0)"
-            : "linear-gradient(135deg, #8ea9ef, #b8a2e6)";
+        : options.background === "custom-gradient"
+          ? `linear-gradient(${options.gradientAngle}deg, ${options.gradientStart}, ${options.gradientEnd})`
+          : options.background === "sunset"
+            ? "linear-gradient(135deg, #f4b8a5, #ba9cdf)"
+            : options.background === "slate"
+              ? "linear-gradient(135deg, #dce3ef, #a8b8d0)"
+              : "linear-gradient(135deg, #8ea9ef, #b8a2e6)";
   function update<K extends keyof ImageOptions>(
     key: K,
     value: ImageOptions[K],
@@ -296,13 +312,143 @@ export default function CodeImage() {
       };
       changeCode(text);
       if (byExtension[ext]) setLanguage(byExtension[ext]);
-      setOptions((previous) => ({ ...previous, title: file.name.slice(0, 80) }));
+      setOptions((previous) => ({
+        ...previous,
+        title: file.name.slice(0, 80),
+      }));
       setNotice(`已导入 ${file.name}，内容仅在浏览器中读取。`);
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "文件读取失败，请重试。");
+      setNotice(
+        error instanceof Error ? error.message : "文件读取失败，请重试。",
+      );
     }
   }
-  async function exportSvg() {
+  function hideActionMenu(target: HTMLElement) {
+    target.closest<HTMLElement>("[popover]")?.hidePopover();
+  }
+
+  async function copyImage() {
+    if (!canExport || !artwork.current || exporting) return;
+    setExporting(true);
+    setNotice("");
+    try {
+      if (!navigator.clipboard?.write || typeof ClipboardItem === "undefined")
+        throw new Error("当前浏览器不支持复制图片，请下载 PNG。");
+      const blob = exportCanvas(artwork.current, options);
+      await navigator.clipboard.write([
+        new ClipboardItem({ "image/png": blob }),
+      ]);
+      setNotice("图片已复制，可以粘贴到支持图片的应用。");
+      trackTool("code-image", "copy_image", "success");
+    } catch {
+      trackTool("code-image", "copy_image", "error");
+      setNotice("复制失败或未获剪贴板权限，请使用「下载 PNG」。");
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function copySvgSource() {
+    if (!canExport || !artwork.current || exporting) return;
+    setExporting(true);
+    setNotice("");
+    try {
+      const source = await exportCanvasSvgSource(artwork.current, options);
+      await navigator.clipboard.writeText(source);
+      setNotice("SVG 源码已复制。");
+      trackTool("code-image", "copy_svg", "success");
+    } catch (error) {
+      trackTool("code-image", "copy_svg", "error");
+      setNotice(
+        error instanceof Error ? error.message : "SVG 源码复制失败，请重试。",
+      );
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function copyPngText(mode: "data-url" | "base64") {
+    if (!canExport || !artwork.current || exporting) return;
+    setExporting(true);
+    setNotice("");
+    const action = mode === "data-url" ? "copy_data_url" : "copy_base64";
+    try {
+      const blob = await exportCanvas(artwork.current, options);
+      const dataUrl = await blobToDataUrl(blob);
+      await navigator.clipboard.writeText(
+        mode === "data-url" ? dataUrl : dataUrlToBase64(dataUrl),
+      );
+      setNotice(
+        mode === "data-url" ? "PNG Data URL 已复制。" : "PNG Base64 已复制。",
+      );
+      trackTool("code-image", action, "success");
+    } catch (error) {
+      trackTool("code-image", action, "error");
+      setNotice(
+        error instanceof Error ? error.message : "复制失败，请检查剪贴板权限。",
+      );
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function openPngPreview() {
+    if (!canExport || !artwork.current || exporting) return;
+    const preview = window.open("", "_blank");
+    if (!preview) {
+      setNotice("新标签页被浏览器拦截，请允许弹出窗口后重试。");
+      trackTool("code-image", "open_image", "error");
+      return;
+    }
+    preview.opener = null;
+    setExporting(true);
+    setNotice("");
+    try {
+      const blob = await exportCanvas(artwork.current, options);
+      const url = URL.createObjectURL(blob);
+      preview.location.href = url;
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      setNotice("已在新标签页打开 PNG。");
+      trackTool("code-image", "open_image", "success");
+    } catch (error) {
+      preview.close();
+      trackTool("code-image", "open_image", "error");
+      setNotice(
+        error instanceof Error ? error.message : "无法打开图片，请重试。",
+      );
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function downloadPng() {
+    if (!canExport || !artwork.current || exporting) return;
+    setExporting(true);
+    setNotice("");
+    try {
+      const blob = await exportCanvas(artwork.current, options);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = imageFilename();
+      link.style.display = "none";
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setNotice("PNG 已生成。");
+      trackTool("code-image", "export", "success");
+    } catch (error) {
+      trackTool("code-image", "export", "error");
+      setNotice(
+        error instanceof Error ? error.message : "PNG 导出失败，请重试。",
+      );
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function downloadSvg() {
     if (!canExport || !artwork.current || exporting) return;
     setExporting(true);
     setNotice("");
@@ -311,57 +457,22 @@ export default function CodeImage() {
       const link = document.createElement("a");
       link.href = dataUrl;
       link.download = imageFilename(new Date(), "svg");
+      link.style.display = "none";
+      document.body.append(link);
       link.click();
+      link.remove();
       setNotice("SVG 已生成。");
       trackTool("code-image", "export_svg", "success");
     } catch (error) {
       trackTool("code-image", "export_svg", "error");
-      setNotice(error instanceof Error ? error.message : "SVG 导出失败，请重试。");
-    } finally {
-      setExporting(false);
-    }
-  }
-
-  async function exportImage(copy: boolean) {
-    if (!canExport || !artwork.current || exporting) return;
-    setExporting(true);
-    setNotice("");
-    try {
-      // Create the promise inside the click gesture, including for Safari's clipboard API.
-      if (
-        copy &&
-        (!navigator.clipboard?.write || typeof ClipboardItem === "undefined")
-      )
-        throw new Error("当前浏览器不支持复制图片，请下载 PNG。");
-      const blob = exportCanvas(artwork.current, options);
-      if (copy) {
-        await navigator.clipboard.write([
-          new ClipboardItem({ "image/png": blob }),
-        ]);
-        setNotice("图片已复制，可以粘贴到支持图片的应用。");
-      } else {
-        const url = URL.createObjectURL(await blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = imageFilename();
-        link.click();
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-        setNotice("PNG 已生成。");
-      }
-      trackTool("code-image", copy ? "copy_image" : "export", "success");
-    } catch (error) {
-      trackTool("code-image", copy ? "copy_image" : "export", "error");
       setNotice(
-        copy
-          ? "复制失败或未获剪贴板权限，请使用「下载 PNG」。"
-          : error instanceof Error
-            ? error.message
-            : "导出失败，请重试。",
+        error instanceof Error ? error.message : "SVG 导出失败，请重试。",
       );
     } finally {
       setExporting(false);
     }
   }
+
   const select = (
     label: string,
     value: string,
@@ -396,7 +507,7 @@ export default function CodeImage() {
           <h1>代码画布</h1>
           <p>直接在画布中写下代码，把眼前的作品带走。</p>
         </div>
-        <span className="shot-badge">LOCAL · PNG</span>
+        <span className="shot-badge">LOCAL · PNG / SVG</span>
       </section>
       <div className="shot-toolbar canvas-toolbar" aria-label="画布工具栏">
         <CanvasPopover
@@ -458,7 +569,15 @@ export default function CodeImage() {
               p.background === options.background &&
               p.padding === options.padding &&
               p.fontSize === options.fontSize &&
-              (!p.color || p.color === options.color),
+              p.fontFamily === options.fontFamily &&
+              p.lineHeight === options.lineHeight &&
+              p.codePadding === options.codePadding &&
+              p.lineNumbers === options.lineNumbers &&
+              p.windowStyle === options.windowStyle &&
+              p.windowRadius === options.windowRadius &&
+              p.shadow === options.shadow &&
+              p.aspectRatio === options.aspectRatio &&
+              (!("color" in p) || p.color === options.color),
           )?.name || "custom",
           [["custom", "自定义"], ...imagePresets.map((p) => [p.name, p.name])],
           (name) => {
@@ -475,7 +594,16 @@ export default function CodeImage() {
               background: preset.background,
               padding: preset.padding,
               fontSize: preset.fontSize,
-              ...(preset.color ? { color: preset.color } : {}),
+              fontFamily: preset.fontFamily,
+              lineHeight: preset.lineHeight,
+              codePadding: preset.codePadding,
+              lineNumbers: preset.lineNumbers,
+              windowStyle: preset.windowStyle,
+              windowRadius: preset.windowRadius,
+              shadow: preset.shadow,
+              aspectRatio: preset.aspectRatio,
+              windowBar: true,
+              ...("color" in preset ? { color: preset.color } : {}),
             }));
           },
         )}
@@ -497,35 +625,123 @@ export default function CodeImage() {
         </CanvasPopover>
 
         <div className="canvas-export-actions">
-          {select(
-            "导出倍率",
-            String(options.scale),
-            [
-              ["1", "1×"],
-              ["2", "2×"],
-              ["3", "3×"],
-            ],
-            (value) => update("scale", Number(value)),
-          )}
-          <button
+          <CanvasPopover
+            alignEnd
+            label="复制 / 分享"
+            title="复制 / 分享"
             disabled={!canExport || exporting}
-            onClick={() => exportImage(true)}
           >
-            复制图片
-          </button>
-          <button
+            <div className="canvas-action-menu">
+              <button
+                type="button"
+                aria-label="复制图片"
+                onClick={(event) => {
+                  hideActionMenu(event.currentTarget);
+                  void copyImage();
+                }}
+              >
+                <span>复制图片</span>
+                <small>PNG</small>
+              </button>
+              <button
+                type="button"
+                aria-label="复制 SVG 源码"
+                onClick={(event) => {
+                  hideActionMenu(event.currentTarget);
+                  void copySvgSource();
+                }}
+              >
+                <span>复制 SVG 源码</span>
+                <small>SVG</small>
+              </button>
+              <button
+                type="button"
+                aria-label="复制 PNG Data URL"
+                onClick={(event) => {
+                  hideActionMenu(event.currentTarget);
+                  void copyPngText("data-url");
+                }}
+              >
+                <span>复制 PNG Data URL</span>
+                <small>data:image/png</small>
+              </button>
+              <button
+                type="button"
+                aria-label="复制 PNG Base64"
+                onClick={(event) => {
+                  hideActionMenu(event.currentTarget);
+                  void copyPngText("base64");
+                }}
+              >
+                <span>复制 PNG Base64</span>
+                <small>纯 Base64</small>
+              </button>
+              <button
+                type="button"
+                aria-label="在新标签页打开"
+                onClick={(event) => {
+                  hideActionMenu(event.currentTarget);
+                  void openPngPreview();
+                }}
+              >
+                <span>在新标签页打开</span>
+                <small>PNG 预览</small>
+              </button>
+            </div>
+          </CanvasPopover>
+
+          <CanvasPopover
+            alignEnd
+            label={exporting ? "正在导出…" : "导出"}
+            title="导出"
             disabled={!canExport || exporting}
-            onClick={exportSvg}
           >
-            下载 SVG
-          </button>
-          <button
-            className="primary"
-            disabled={!canExport || exporting}
-            onClick={() => exportImage(false)}
-          >
-            {exporting ? "正在导出…" : "下载 PNG"}
-          </button>
+            <div className="canvas-export-menu">
+              <div
+                className="canvas-export-scale"
+                role="group"
+                aria-label="PNG 导出倍率"
+              >
+                <span>PNG 导出倍率</span>
+                <div>
+                  {[1, 2, 3].map((scale) => (
+                    <button
+                      type="button"
+                      key={scale}
+                      aria-pressed={options.scale === scale}
+                      onClick={() => update("scale", scale)}
+                    >
+                      {scale}×
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="canvas-action-menu">
+                <button
+                  type="button"
+                  aria-label="下载 PNG"
+                  onClick={(event) => {
+                    hideActionMenu(event.currentTarget);
+                    void downloadPng();
+                  }}
+                >
+                  <span>下载 PNG</span>
+                  <small>{options.scale}×</small>
+                </button>
+                <button
+                  type="button"
+                  aria-label="下载 SVG"
+                  onClick={(event) => {
+                    hideActionMenu(event.currentTarget);
+                    void downloadSvg();
+                  }}
+                >
+                  <span>下载 SVG</span>
+                  <small>矢量 · 不受倍率影响</small>
+                </button>
+              </div>
+            </div>
+          </CanvasPopover>
         </div>
       </div>
       <div className="canvas-utility">
@@ -608,6 +824,7 @@ export default function CodeImage() {
                     ? Math.max(320, Math.min(2400, options.width))
                     : autoWidth,
                 background,
+                aspectRatio: aspectRatioValue(options.aspectRatio),
                 transform: `scale(${displayScale})`,
                 font: canvasFont(options),
                 fontVariantLigatures: "none",
@@ -638,13 +855,22 @@ export default function CodeImage() {
                 overflow: "hidden",
               }}
             >
-              {options.windowBar && (
-                <div className="canvas-windowbar">
-                  <div className="canvas-window-dots" aria-hidden="true">
-                    <span />
-                    <span />
-                    <span />
-                  </div>
+              {options.windowBar && options.windowStyle !== "none" && (
+                <div
+                  className={`canvas-windowbar style-${options.windowStyle}`}
+                >
+                  {options.windowStyle === "mac" && (
+                    <div className="canvas-window-dots" aria-hidden="true">
+                      <span />
+                      <span />
+                      <span />
+                    </div>
+                  )}
+                  {options.windowStyle === "minimal" && (
+                    <div className="canvas-window-minimal" aria-hidden="true">
+                      •••
+                    </div>
+                  )}
                   <div className="canvas-title" style={{ color: theme.muted }}>
                     <span aria-hidden="true">{options.title || "\u00a0"}</span>
                     <input
@@ -659,13 +885,18 @@ export default function CodeImage() {
                   </div>
                 </div>
               )}
-              <div className="canvas-code-padding">
+              <div
+                className="canvas-code-padding"
+                style={{ padding: options.codePadding }}
+              >
                 <CanvasCode
                   code={code}
                   segments={segments}
                   colors={theme.colors}
                   muted={theme.muted}
                   lineNumbers={options.lineNumbers}
+                  startLine={options.startLine}
+                  highlightedLines={highlightedLines}
                   wrap={options.widthMode === "fixed" && options.wrap}
                   readOnly={exporting}
                   onChange={changeCode}
@@ -707,9 +938,9 @@ export default function CodeImage() {
         <details>
           <summary>使用说明 · 编辑与导出</summary>
           <p>
-            在画布上直接输入代码、修改标题。画布会随内容增高；缩放只影响查看比例，导出使用实际尺寸。PNG
-            不包含光标、选区和操作控件。支持 28 种语言与格式，以及 1× / 2× / 3×
-            导出。中文和未覆盖字符使用系统字体回退。
+            在画布上直接输入代码、修改标题。可自定义渐变背景、窗口样式、画布比例、起始行号和高亮行；缩放只影响查看比例，导出使用实际尺寸。PNG
+            / SVG 不包含光标、选区和操作控件。支持 28 种语言与格式，以及 1× / 2×
+            / 3× PNG 导出。中文和未覆盖字符使用系统字体回退。
           </p>
           <p>
             所有内容在浏览器内处理，不执行或上传代码。仅记住外观设置，不保存代码或标题。最多支持

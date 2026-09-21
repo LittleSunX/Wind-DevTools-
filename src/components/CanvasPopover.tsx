@@ -1,4 +1,10 @@
-import { useEffect, useId, useRef, type ReactNode, type RefObject } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  type ReactNode,
+  type RefObject,
+} from "react";
 
 export default function CanvasPopover({
   label,

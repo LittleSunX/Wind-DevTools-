@@ -2,12 +2,7 @@ import { jsonTool } from "./json";
 import type { Options } from "./shared";
 
 type JsonValue =
-  | null
-  | boolean
-  | number
-  | string
-  | JsonValue[]
-  | { [key: string]: JsonValue };
+  null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 
 function parseJson(input: string): JsonValue {
   jsonTool(input, { action: "validate" });
@@ -24,7 +19,11 @@ function titleCase(name: string) {
   return id.charAt(0).toUpperCase() + id.slice(1);
 }
 
-function tsType(value: JsonValue, name: string, defs: Map<string, string>): string {
+function tsType(
+  value: JsonValue,
+  name: string,
+  defs: Map<string, string>,
+): string {
   if (value === null) return "null";
   if (Array.isArray(value)) {
     if (!value.length) return "unknown[]";
@@ -44,7 +43,10 @@ function tsType(value: JsonValue, name: string, defs: Map<string, string>): stri
         const childName = `${typeName}${titleCase(key)}`;
         return `  ${JSON.stringify(key)}: ${tsType(item, childName, defs)};`;
       });
-      defs.set(typeName, `export interface ${typeName} {\n${fields.join("\n")}\n}`);
+      defs.set(
+        typeName,
+        `export interface ${typeName} {\n${fields.join("\n")}\n}`,
+      );
       return typeName;
     }
   }
@@ -96,17 +98,17 @@ export function jsonTypeTool(input: string, options: Options) {
       !Array.isArray(value) &&
       defs.has(rootName)
     ) {
-      const root = defs.get(rootName)!.replace(
-        `class ${rootName}`,
-        `public class ${rootName}`,
-      );
+      const root = defs
+        .get(rootName)!
+        .replace(`class ${rootName}`, `public class ${rootName}`);
       const children = [...defs.entries()]
         .filter(([name]) => name !== rootName)
         .map(([, definition]) => definition)
         .join("\n\n");
       return `import java.util.List;\n\n${root}${children ? `\n\n${children}` : ""}`;
     }
-    return `import java.util.List;\n\npublic class ${rootName} {\n    private ${rootType} value;\n}`;
+    const children = [...defs.values()].join("\n\n");
+    return `import java.util.List;\n\npublic class ${rootName} {\n    private ${rootType} value;\n}${children ? `\n\n${children}` : ""}`;
   }
 
   const defs = new Map<string, string>();
@@ -127,5 +129,6 @@ export function jsonTypeTool(input: string, options: Options) {
       .map(([, definition]) => definition);
     return [root, ...children].join("\n\n");
   }
-  return `export type ${rootName} = ${rootType};`;
+  const definitions = [...defs.values()].join("\n\n");
+  return `export type ${rootName} = ${rootType};${definitions ? `\n\n${definitions}` : ""}`;
 }

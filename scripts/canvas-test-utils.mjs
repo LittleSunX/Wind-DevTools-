@@ -1,7 +1,7 @@
 import { expect } from "@playwright/test";
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 export function canvasTools(page) {
-  const download = page.getByRole("button", { name: "下载 PNG", exact: true });
+  const download = page.getByRole("button", { name: "导出", exact: true });
   const editor = page.getByLabel("代码", { exact: true });
   const artwork = page.locator(".canvas-artwork");
   async function close() {
@@ -12,8 +12,7 @@ export function canvasTools(page) {
     );
   }
   async function field(label) {
-    if (["代码", "窗口标题", "画布缩放", "导出倍率", "风格"].includes(label))
-      await close();
+    if (["代码", "窗口标题", "画布缩放", "风格"].includes(label)) await close();
     else if (
       !(await page
         .getByRole("dialog", { name: "外观设置", exact: true })
@@ -25,21 +24,46 @@ export function canvasTools(page) {
   async function ready() {
     await expect(download).toBeEnabled({ timeout: 15000 });
   }
+  async function openPopover(trigger) {
+    await close();
+    const title = await trigger.evaluate((element) => {
+      const target =
+        element.popoverTargetElement ||
+        document.getElementById(element.getAttribute("popovertarget"));
+      if (!target) throw new Error("popover target not found");
+      return target.getAttribute("aria-label") || "";
+    });
+    await trigger.click();
+    const panel = page.getByRole("dialog", { name: title, exact: true });
+    await expect(panel).toBeVisible();
+    return panel;
+  }
   async function language(id) {
     await close();
     await page.getByRole("button", { name: /^语言 ·/ }).click();
     await page.getByLabel("搜索语言", { exact: true }).fill(id);
     await page.locator(`.shot-language-list button[value="${id}"]`).click();
   }
+  async function scale(value) {
+    await ready();
+    const panel = await openPopover(download);
+    await panel.getByRole("button", { name: `${value}×`, exact: true }).click();
+    await close();
+  }
   async function png(path) {
     await close();
     await ready();
-    const pending = page.waitForEvent("download");
-    await download.click();
-    const file = await pending;
-    await file.saveAs(path);
-    return { bytes: await readFile(path), name: file.suggestedFilename() };
+    const panel = await openPopover(download);
+    const downloadEvent = page.waitForEvent("download");
+    await panel.getByRole("button", { name: "下载 PNG", exact: true }).click();
+    const file = await downloadEvent;
+    const tempPath = await file.path();
+    if (!tempPath) throw new Error("PNG download path unavailable");
+    const bytes = await readFile(tempPath);
+    await writeFile(path, bytes);
+    return { bytes, name: file.suggestedFilename() };
   }
+
   async function dimensions() {
     return artwork.evaluate((el) => ({
       w: el.offsetWidth,
@@ -53,7 +77,9 @@ export function canvasTools(page) {
     close,
     field,
     ready,
+    openPopover,
     language,
+    scale,
     png,
     dimensions,
   };

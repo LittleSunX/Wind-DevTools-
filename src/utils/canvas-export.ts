@@ -54,7 +54,6 @@ export async function exportCanvas(
   return blob;
 }
 
-
 export async function exportCanvasSvg(
   node: HTMLElement,
   options: ImageOptions,
@@ -79,4 +78,43 @@ export async function exportCanvasSvg(
       ),
     style: { transform: "none", margin: "0", boxShadow: "none" },
   });
+}
+
+export function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("无法读取导出图片。"));
+    reader.readAsDataURL(blob);
+  });
+}
+
+export function dataUrlToBase64(dataUrl: string) {
+  const comma = dataUrl.indexOf(",");
+  if (comma < 0) throw new Error("图片 Data URL 无效。");
+  return dataUrl.slice(comma + 1);
+}
+
+export function svgDataUrlToSource(dataUrl: string) {
+  const comma = dataUrl.indexOf(",");
+  if (comma < 0) throw new Error("SVG 内容无效。");
+  const metadata = dataUrl.slice(0, comma);
+  const payload = dataUrl.slice(comma + 1);
+  try {
+    if (metadata.includes(";base64")) {
+      const binary = atob(payload);
+      const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+      return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    }
+    return decodeURIComponent(payload);
+  } catch {
+    throw new Error("SVG 源码解析失败，请重试。");
+  }
+}
+
+export async function exportCanvasSvgSource(
+  node: HTMLElement,
+  options: ImageOptions,
+) {
+  return svgDataUrlToSource(await exportCanvasSvg(node, options));
 }

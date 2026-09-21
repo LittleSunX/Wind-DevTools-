@@ -14,14 +14,23 @@ for (const [name, engine] of [
     viewport: { width: 1440, height: 1200 },
   });
   page.setDefaultTimeout(15000);
-  const { download, editor, artwork, close, field, ready, png } =
-    canvasTools(page);
+  const {
+    download,
+    editor,
+    artwork,
+    close,
+    field,
+    ready,
+    openPopover,
+    scale,
+    png,
+  } = canvasTools(page);
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   try {
     await page.goto(base + "/tools/code-image");
     await ready();
-    await (await field("导出倍率")).selectOption("1");
+    await scale(1);
     await (await field("字体")).selectOption("source");
     await (await field("行高")).selectOption("1.4");
     await close();
@@ -131,7 +140,12 @@ for (const [name, engine] of [
         configurable: true,
       }),
     );
-    await page.getByRole("button", { name: "复制图片", exact: true }).click();
+    const sharePanel = await openPopover(
+      page.getByRole("button", { name: "复制 / 分享", exact: true }),
+    );
+    await sharePanel
+      .getByRole("button", { name: "复制图片", exact: true })
+      .click();
     await page
       .getByRole("status")
       .filter({ hasText: "请使用「下载 PNG」" })

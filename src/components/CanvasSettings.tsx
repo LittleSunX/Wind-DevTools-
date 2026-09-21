@@ -142,6 +142,7 @@ export default function CanvasSettings({
           ["sunset", "日落渐变"],
           ["slate", "雾灰渐变"],
           ["solid", "纯色"],
+          ["custom-gradient", "自定义渐变"],
           ["transparent", "透明"],
         ],
         (v) => update("background", v),
@@ -157,6 +158,43 @@ export default function CanvasSettings({
             disabled={exporting}
           />
         </label>
+      )}
+      {options.background === "custom-gradient" && (
+        <>
+          <label className="shot-field">
+            渐变起始色
+            <input
+              type="color"
+              aria-label="渐变起始色"
+              value={options.gradientStart}
+              onChange={(e) => update("gradientStart", e.target.value)}
+              disabled={exporting}
+            />
+          </label>
+          <label className="shot-field">
+            渐变结束色
+            <input
+              type="color"
+              aria-label="渐变结束色"
+              value={options.gradientEnd}
+              onChange={(e) => update("gradientEnd", e.target.value)}
+              disabled={exporting}
+            />
+          </label>
+          <label className="shot-field shot-wide">
+            渐变角度 · {options.gradientAngle}°
+            <input
+              type="range"
+              aria-label="渐变角度"
+              min={0}
+              max={360}
+              step={15}
+              value={options.gradientAngle}
+              onChange={(e) => update("gradientAngle", Number(e.target.value))}
+              disabled={exporting}
+            />
+          </label>
+        </>
       )}
       {select(
         "字体",
@@ -192,6 +230,24 @@ export default function CanvasSettings({
         (v) => update("padding", Number(v)),
       )}
       {select(
+        "代码内边距",
+        String(options.codePadding),
+        [16, 20, 24, 28, 32, 40, 48].map((n) => [String(n), `${n} px`]),
+        (v) => update("codePadding", Number(v)),
+      )}
+      {select(
+        "画布比例",
+        options.aspectRatio,
+        [
+          ["free", "自由"],
+          ["1:1", "1:1 · 方形"],
+          ["4:3", "4:3"],
+          ["16:9", "16:9"],
+          ["1.91:1", "1.91:1 · 博客横图"],
+        ],
+        (v) => update("aspectRatio", v as ImageOptions["aspectRatio"]),
+      )}
+      {select(
         "窗口圆角",
         String(options.windowRadius),
         [
@@ -212,6 +268,49 @@ export default function CanvasSettings({
         ],
         (v) => update("shadow", v as ImageOptions["shadow"]),
       )}
+      {select(
+        "窗口样式",
+        options.windowStyle,
+        [
+          ["mac", "Mac 三色按钮"],
+          ["minimal", "极简标题栏"],
+          ["title", "仅标题"],
+          ["none", "无窗口装饰"],
+        ],
+        (v) => update("windowStyle", v as ImageOptions["windowStyle"]),
+      )}
+      <label className="shot-field">
+        起始行号
+        <input
+          type="number"
+          aria-label="起始行号"
+          min={1}
+          max={9999}
+          value={options.startLine}
+          onChange={(e) =>
+            update(
+              "startLine",
+              Math.max(1, Math.min(9999, Number(e.target.value) || 1)),
+            )
+          }
+          disabled={exporting}
+        />
+      </label>
+      <label className="shot-field shot-wide">
+        高亮行
+        <input
+          type="text"
+          aria-label="高亮行"
+          placeholder="例如 2,4-6"
+          value={options.highlightLines}
+          maxLength={120}
+          onChange={(e) => update("highlightLines", e.target.value)}
+          disabled={exporting}
+        />
+      </label>
+      <p className="shot-setting-help shot-wide">
+        高亮行按当前显示行号填写，支持逗号和范围，例如 101,103-105。
+      </p>
       <label className="shot-check">
         <input
           type="checkbox"

@@ -11,7 +11,18 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 const root = process.cwd();
-for (const tool of ["json", "timestamp", "jwt", "sql", "cron", "code-image"]) {
+for (const tool of [
+  "json",
+  "timestamp",
+  "jwt",
+  "sql",
+  "cron",
+  "code-image",
+  "diff",
+  "codec",
+  "json-type",
+  "text",
+]) {
   const html = await readFile(`dist/tools/${tool}/index.html`, "utf8");
   assert.ok(html.includes("<h1>"));
   assert.ok(html.includes("使用说明"));
@@ -53,7 +64,7 @@ try {
     path.join(fixture, "dist/sitemap.xml"),
     "utf8",
   );
-  assert.equal((sitemap.match(/<url>/g) || []).length, 7);
+  assert.equal((sitemap.match(/<url>/g) || []).length, 11);
   assert.ok(
     (await readFile(path.join(fixture, "dist/robots.txt"), "utf8")).includes(
       "Sitemap: https://wind-devtools.test/sitemap.xml",

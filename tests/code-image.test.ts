@@ -5,7 +5,13 @@ import {
   imageFilename,
   validateCode,
   languages,
+  parseHighlightedLines,
+  aspectRatioValue,
 } from "../src/utils/code-image";
+import {
+  dataUrlToBase64,
+  svgDataUrlToSource,
+} from "../src/utils/canvas-export";
 describe("code image highlighting", () => {
   it.each(languages.map(([id]) => id))(
     "preserves source text in %s",
@@ -66,4 +72,43 @@ it("creates a sortable local timestamp filename", () => {
   const date = new Date(2026, 8, 18, 9, 5, 2, 7);
   expect(imageFilename(date)).toBe("wind-code-20260918-090502-007.png");
   expect(imageFilename(date, "svg")).toBe("wind-code-20260918-090502-007.svg");
+});
+
+describe("advanced canvas helpers", () => {
+  it("parses highlighted displayed line numbers with ranges", () => {
+    expect([...parseHighlightedLines("101, 103-105, 999", 100, 6)]).toEqual([
+      101, 103, 104, 105,
+    ]);
+  });
+
+  it("maps aspect-ratio presets to CSS values", () => {
+    expect(aspectRatioValue("1:1")).toBe("1 / 1");
+    expect(aspectRatioValue("16:9")).toBe("16 / 9");
+    expect(aspectRatioValue("free")).toBeUndefined();
+  });
+});
+
+describe("canvas export data helpers", () => {
+  it("extracts pure Base64 from a PNG data URL", () => {
+    expect(dataUrlToBase64("data:image/png;base64,abc123")).toBe("abc123");
+  });
+
+  it("decodes URL-encoded SVG source", () => {
+    const source =
+      '<svg xmlns="http://www.w3.org/2000/svg"><text>Wind 中文</text></svg>';
+    expect(
+      svgDataUrlToSource(
+        `data:image/svg+xml;charset=utf-8,${encodeURIComponent(source)}`,
+      ),
+    ).toBe(source);
+  });
+
+  it("decodes Base64 SVG source", () => {
+    const source = "<svg><text>Wind</text></svg>";
+    expect(
+      svgDataUrlToSource(
+        `data:image/svg+xml;base64,${Buffer.from(source).toString("base64")}`,
+      ),
+    ).toBe(source);
+  });
 });

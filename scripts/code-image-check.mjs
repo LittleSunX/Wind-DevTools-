@@ -19,7 +19,9 @@ const {
   close,
   field,
   ready,
+  openPopover,
   language,
+  scale,
   png,
   dimensions,
 } = canvasTools(page);
@@ -37,7 +39,7 @@ try {
     await page.locator(".shot-layout, .shot-preview-stage").count(),
     0,
   );
-  await (await field("导出倍率")).selectOption("1");
+  await scale(1);
   await ready();
   // Use an integer origin for raster comparison; small glyph antialias differences are allowed.
   await page
@@ -58,12 +60,12 @@ try {
     (await comparePixels(page, first.bytes, zoomed.bytes)).ratio < 0.001,
   );
   await (await field("画布缩放")).selectOption("1");
-  await (await field("导出倍率")).selectOption("3");
+  await scale(3);
   await ready();
   const scaled = await png("artifacts/canvas-3x.png");
   assert.equal(scaled.bytes.readUInt32BE(16), original.w * 3);
   assert.equal(scaled.bytes.readUInt32BE(20), original.h * 3);
-  await (await field("导出倍率")).selectOption("1");
+  await scale(1);
   await editor.fill(
     'const 中文 = "👨‍👩‍👧‍👦 <script>alert(1)</script>";\n\tconst token = "PRIVATE_SOURCE_47219";\n',
   );
@@ -96,7 +98,12 @@ try {
     (await comparePixels(page, titleExport.bytes, selectedExport.bytes)).ratio <
       0.001,
   );
-  await page.getByRole("button", { name: "复制图片", exact: true }).click();
+  const sharePanel = await openPopover(
+    page.getByRole("button", { name: "复制 / 分享", exact: true }),
+  );
+  await sharePanel
+    .getByRole("button", { name: "复制图片", exact: true })
+    .click();
   await page.getByRole("status").filter({ hasText: "图片已复制" }).waitFor();
   assert.ok(
     await page.evaluate(async () =>
@@ -191,9 +198,17 @@ try {
   await ready();
   assert.match(await editor.inputValue(), /public class Welcome/);
   assert.ok(
+    requests.every((request) => !request.includes("PRIVATE_")),
+    "private code must never appear in request URLs or payloads",
+  );
+  assert.ok(
     requests.every(
-      (request) => request.startsWith(base) && !request.includes("PRIVATE_"),
+      (request) =>
+        request.startsWith(base) ||
+        request.startsWith("blob:") ||
+        request.startsWith("data:"),
     ),
+    "canvas export must not make external requests",
   );
   assert.ok(
     !(await page.evaluate(() =>
@@ -234,7 +249,7 @@ try {
   await failed.getByRole("button", { name: /^外观设置/ }).click();
   await failed.getByLabel("字体", { exact: true }).selectOption("system");
   await expect(
-    failed.getByRole("button", { name: "下载 PNG", exact: true }),
+    failed.getByRole("button", { name: "导出", exact: true }),
   ).toBeEnabled();
   await failed.close();
   assert.deepEqual(errors, []);
