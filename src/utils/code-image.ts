@@ -16,6 +16,14 @@ export type ImageOptions = {
   wrap: boolean;
   windowRadius: number;
   shadow: "none" | "soft" | "strong";
+  windowStyle: "mac" | "minimal" | "title" | "none";
+  codePadding: number;
+  startLine: number;
+  highlightLines: string;
+  aspectRatio: "free" | "1:1" | "4:3" | "16:9" | "1.91:1";
+  gradientStart: string;
+  gradientEnd: string;
+  gradientAngle: number;
 };
 export const canvasFonts = [
   {
@@ -177,7 +185,54 @@ export const defaults: ImageOptions = {
   wrap: true,
   windowRadius: 12,
   shadow: "soft",
+  windowStyle: "mac",
+  codePadding: 28,
+  startLine: 1,
+  highlightLines: "",
+  aspectRatio: "free",
+  gradientStart: "#8ea9ef",
+  gradientEnd: "#b8a2e6",
+  gradientAngle: 135,
 };
+export function parseHighlightedLines(value: string, lineCount: number) {
+  const result = new Set<number>();
+  const text = value.trim();
+  if (!text) return result;
+  for (const part of text.split(",")) {
+    const token = part.trim();
+    if (!token) continue;
+    const range = token.match(/^(\d+)-(\d+)$/);
+    if (range) {
+      const start = Number(range[1]);
+      const end = Number(range[2]);
+      if (!Number.isInteger(start) || !Number.isInteger(end) || start < 1 || end < start)
+        continue;
+      for (let line = start; line <= Math.min(end, lineCount); line++) result.add(line);
+      continue;
+    }
+    if (/^\d+$/.test(token)) {
+      const line = Number(token);
+      if (line >= 1 && line <= lineCount) result.add(line);
+    }
+  }
+  return result;
+}
+
+export function aspectRatioValue(value: ImageOptions["aspectRatio"]) {
+  switch (value) {
+    case "1:1":
+      return "1 / 1";
+    case "4:3":
+      return "4 / 3";
+    case "16:9":
+      return "16 / 9";
+    case "1.91:1":
+      return "1.91 / 1";
+    default:
+      return undefined;
+  }
+}
+
 export function validateCode(code: string) {
   if (!code.trim()) throw new Error("请输入代码，或加载示例。");
   if (code.length > 12000)
