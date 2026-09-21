@@ -19,6 +19,7 @@ const {
   close,
   field,
   ready,
+  openPopover,
   language,
   scale,
   png,
@@ -97,9 +98,10 @@ try {
     (await comparePixels(page, titleExport.bytes, selectedExport.bytes)).ratio <
       0.001,
   );
-  await page.getByRole("button", { name: "复制 / 分享", exact: true }).click();
-  await page
-    .getByRole("dialog", { name: "复制 / 分享", exact: true })
+  const sharePanel = await openPopover(
+    page.getByRole("button", { name: "复制 / 分享", exact: true }),
+  );
+  await sharePanel
     .getByRole("button", { name: "复制图片", exact: true })
     .click();
   await page.getByRole("status").filter({ hasText: "图片已复制" }).waitFor();
