@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode, type RefObject } from "react";
 
 export default function CanvasPopover({
   label,
@@ -6,15 +6,18 @@ export default function CanvasPopover({
   children,
   disabled = false,
   alignEnd = false,
+  triggerRef,
 }: {
   label: string;
   title: string;
   children: ReactNode;
   disabled?: boolean;
   alignEnd?: boolean;
+  triggerRef?: RefObject<HTMLButtonElement | null>;
 }) {
   const id = useId();
-  const trigger = useRef<HTMLButtonElement>(null);
+  const internalTrigger = useRef<HTMLButtonElement>(null);
+  const trigger = triggerRef ?? internalTrigger;
   const panel = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const close = () => {

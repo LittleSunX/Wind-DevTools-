@@ -14,6 +14,8 @@ export function sanitizePreferences(value: unknown): Partial<ImageOptions> {
     padding: [16, 32, 48, 64],
     scale: [1, 2, 3],
     widthMode: ["auto", "fixed"],
+    windowRadius: [0, 8, 12, 18],
+    shadow: ["none", "soft", "strong"],
   };
   for (const [key, allowed] of Object.entries(enums))
     if (allowed.includes(data[key])) result[key] = data[key];

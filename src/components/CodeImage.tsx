@@ -9,7 +9,7 @@ import CanvasSettings from "./CanvasSettings";
 import CanvasPopover from "./CanvasPopover";
 import CanvasCode from "./CanvasCode";
 import { loadCanvasFont } from "../utils/canvas-fonts";
-import { exportCanvas } from "../utils/canvas-export";
+import { exportCanvas, exportCanvasSvg } from "../utils/canvas-export";
 import { readPreferences, writePreferences } from "../utils/canvas-preferences";
 import { sampleForLanguage } from "../utils/code-samples";
 import { trackTool } from "../analytics";
@@ -45,6 +45,8 @@ export default function CodeImage() {
   const [replace, setReplace] = useState(false);
   const [languageSearch, setLanguageSearch] = useState("");
   const [zoom, setZoom] = useState("1");
+  const [draggingFile, setDraggingFile] = useState(false);
+  const settingsTrigger = useRef<HTMLButtonElement>(null);
   const artwork = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const [available, setAvailable] = useState(1000);
@@ -236,6 +238,76 @@ export default function CodeImage() {
     setReplace(false);
     setNotice("");
   }
+  async function importFile(file: File) {
+    setDraggingFile(false);
+    if (file.size > 256 * 1024) {
+      setNotice("文件过大，请选择 256 KB 以内的代码文件。");
+      return;
+    }
+    try {
+      const text = await file.text();
+      validateCode(text);
+      const ext = file.name.split(".").pop()?.toLowerCase() || "";
+      const byExtension: Record<string, string> = {
+        ts: "typescript",
+        js: "javascript",
+        jsx: "jsx",
+        tsx: "tsx",
+        html: "markup",
+        htm: "markup",
+        css: "css",
+        vue: "vue",
+        java: "java",
+        py: "python",
+        go: "go",
+        rs: "rust",
+        c: "c",
+        h: "c",
+        cpp: "cpp",
+        cc: "cpp",
+        cs: "csharp",
+        php: "php",
+        rb: "ruby",
+        kt: "kotlin",
+        swift: "swift",
+        sh: "bash",
+        ps1: "powershell",
+        json: "json",
+        yaml: "yaml",
+        yml: "yaml",
+        toml: "toml",
+        xml: "xml",
+        md: "markdown",
+        sql: "sql",
+      };
+      changeCode(text);
+      if (byExtension[ext]) setLanguage(byExtension[ext]);
+      setOptions((previous) => ({ ...previous, title: file.name.slice(0, 80) }));
+      setNotice(`已导入 ${file.name}，内容仅在浏览器中读取。`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "文件读取失败，请重试。");
+    }
+  }
+  async function exportSvg() {
+    if (!canExport || !artwork.current || exporting) return;
+    setExporting(true);
+    setNotice("");
+    try {
+      const dataUrl = await exportCanvasSvg(artwork.current, options);
+      const link = document.createElement("a");
+      link.href = dataUrl;
+      link.download = imageFilename(new Date(), "svg");
+      link.click();
+      setNotice("SVG 已生成。");
+      trackTool("code-image", "export_svg", "success");
+    } catch (error) {
+      trackTool("code-image", "export_svg", "error");
+      setNotice(error instanceof Error ? error.message : "SVG 导出失败，请重试。");
+    } finally {
+      setExporting(false);
+    }
+  }
+
   async function exportImage(copy: boolean) {
     if (!canExport || !artwork.current || exporting) return;
     setExporting(true);
@@ -376,6 +448,10 @@ export default function CodeImage() {
           )?.name || "custom",
           [["custom", "自定义"], ...imagePresets.map((p) => [p.name, p.name])],
           (name) => {
+            if (name === "custom") {
+              requestAnimationFrame(() => settingsTrigger.current?.click());
+              return;
+            }
             const preset = imagePresets.find((p) => p.name === name);
             if (!preset) return;
             setNotice("");
@@ -391,6 +467,7 @@ export default function CodeImage() {
         )}
         <CanvasPopover
           alignEnd
+          triggerRef={settingsTrigger}
           label="外观设置"
           title="外观设置"
           disabled={exporting}
@@ -423,6 +500,12 @@ export default function CodeImage() {
             复制图片
           </button>
           <button
+            disabled={!canExport || exporting}
+            onClick={exportSvg}
+          >
+            下载 SVG
+          </button>
+          <button
             className="primary"
             disabled={!canExport || exporting}
             onClick={() => exportImage(false)}
@@ -446,6 +529,18 @@ export default function CodeImage() {
         <button disabled={exporting} onClick={() => changeCode("")}>
           清空
         </button>
+        <label className="canvas-file-import">
+          导入文件
+          <input
+            type="file"
+            disabled={exporting}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) void importFile(file);
+              event.currentTarget.value = "";
+            }}
+          />
+        </label>
       </div>
       {replace && (
         <div className="replace-prompt">
@@ -457,10 +552,28 @@ export default function CodeImage() {
         </div>
       )}
       <div
-        className={`canvas-stage ${options.background === "transparent" ? "is-transparent" : ""}`}
+        className={`canvas-stage ${options.background === "transparent" ? "is-transparent" : ""} ${draggingFile ? "is-dragging" : ""}`}
         ref={stage}
         aria-label="画布工作区"
         aria-busy={exporting}
+        onDragEnter={(event) => {
+          event.preventDefault();
+          if (!exporting) setDraggingFile(true);
+        }}
+        onDragOver={(event) => {
+          event.preventDefault();
+          if (!exporting) event.dataTransfer.dropEffect = "copy";
+        }}
+        onDragLeave={(event) => {
+          if (event.currentTarget === event.target) setDraggingFile(false);
+        }}
+        onDrop={(event) => {
+          event.preventDefault();
+          if (exporting) return;
+          const file = event.dataTransfer.files[0];
+          if (file) void importFile(file);
+          else setDraggingFile(false);
+        }}
       >
         <div
           className="canvas-frame"
@@ -501,6 +614,14 @@ export default function CodeImage() {
               style={{
                 background: theme.bg,
                 minWidth: options.widthMode === "fixed" ? 0 : 420,
+                borderRadius: options.windowRadius,
+                boxShadow:
+                  options.shadow === "none"
+                    ? "none"
+                    : options.shadow === "strong"
+                      ? "0 18px 42px #17203a55"
+                      : "0 10px 24px #17203a33",
+                overflow: "hidden",
               }}
             >
               {options.windowBar && (

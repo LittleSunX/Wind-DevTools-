@@ -191,6 +191,27 @@ export default function CanvasSettings({
         ],
         (v) => update("padding", Number(v)),
       )}
+      {select(
+        "窗口圆角",
+        String(options.windowRadius),
+        [
+          ["0", "直角"],
+          ["8", "轻微 · 8 px"],
+          ["12", "默认 · 12 px"],
+          ["18", "圆润 · 18 px"],
+        ],
+        (v) => update("windowRadius", Number(v)),
+      )}
+      {select(
+        "窗口阴影",
+        options.shadow,
+        [
+          ["none", "无阴影"],
+          ["soft", "柔和"],
+          ["strong", "明显"],
+        ],
+        (v) => update("shadow", v as ImageOptions["shadow"]),
+      )}
       <label className="shot-check">
         <input
           type="checkbox"

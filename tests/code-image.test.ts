@@ -63,7 +63,7 @@ describe("code image highlighting", () => {
 });
 
 it("creates a sortable local timestamp filename", () => {
-  expect(imageFilename(new Date(2026, 8, 18, 9, 5, 2, 7))).toBe(
-    "wind-code-20260918-090502-007.png",
-  );
+  const date = new Date(2026, 8, 18, 9, 5, 2, 7);
+  expect(imageFilename(date)).toBe("wind-code-20260918-090502-007.png");
+  expect(imageFilename(date, "svg")).toBe("wind-code-20260918-090502-007.svg");
 });
