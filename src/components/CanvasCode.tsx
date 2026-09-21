@@ -8,6 +8,8 @@ export default function CanvasCode({
   colors,
   muted,
   lineNumbers,
+  startLine,
+  highlightedLines,
   wrap,
   readOnly,
   onChange,
@@ -17,6 +19,8 @@ export default function CanvasCode({
   colors: Record<string, string>;
   muted: string;
   lineNumbers: boolean;
+  startLine: number;
+  highlightedLines: Set<number>;
   wrap: boolean;
   readOnly: boolean;
   onChange: (code: string) => void;
@@ -61,10 +65,15 @@ export default function CanvasCode({
       <div className="canvas-highlight" aria-hidden="true">
         {lines.map((line, index) => (
           <div className="canvas-source-row" key={index}>
-            <span className="canvas-line-number" style={{ color: muted }}>
-              {lineNumbers ? index + 1 : ""}
+            <span
+              className={`canvas-line-number ${highlightedLines.has(startLine + index) ? "is-highlighted" : ""}`}
+              style={{ color: muted }}
+            >
+              {lineNumbers ? startLine + index : ""}
             </span>
-            <span className="canvas-source-line">
+            <span
+              className={`canvas-source-line ${highlightedLines.has(startLine + index) ? "is-highlighted" : ""}`}
+            >
               {line.length
                 ? line.map((segment, i) => (
                     <span key={i} style={{ color: colors[segment.type] }}>
