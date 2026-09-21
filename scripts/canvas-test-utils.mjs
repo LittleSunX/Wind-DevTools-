@@ -1,5 +1,5 @@
 import { expect } from "@playwright/test";
-import { readFile } from "node:fs/promises";
+import { writeFile } from "node:fs/promises";
 export function canvasTools(page) {
   const download = page.getByRole("button", { name: "导出", exact: true });
   const editor = page.getByLabel("代码", { exact: true });
@@ -24,6 +24,19 @@ export function canvasTools(page) {
   async function ready() {
     await expect(download).toBeEnabled({ timeout: 15000 });
   }
+  async function openPopover(trigger) {
+    await close();
+    await trigger.evaluate((element) => {
+      const target =
+        element.popoverTargetElement ||
+        document.getElementById(element.getAttribute("popovertarget"));
+      if (!target) throw new Error("popover target not found");
+      if (!target.matches(":popover-open")) target.showPopover();
+    });
+    const panel = page.locator("[popover]:popover-open");
+    await expect(panel).toBeVisible();
+    return panel;
+  }
   async function language(id) {
     await close();
     await page.getByRole("button", { name: /^语言 ·/ }).click();
@@ -31,13 +44,9 @@ export function canvasTools(page) {
     await page.locator(`.shot-language-list button[value="${id}"]`).click();
   }
   async function scale(value) {
-    await close();
     await ready();
-    await download.click();
-    await page
-      .getByRole("dialog", { name: "导出", exact: true })
-      .getByRole("button", { name: `${value}×`, exact: true })
-      .click();
+    const panel = await openPopover(download);
+    await panel.getByRole("button", { name: `${value}×`, exact: true }).click();
     await close();
   }
   async function png(path) {
@@ -69,19 +78,14 @@ export function canvasTools(page) {
       }
       window.__windCapturedDownload = null;
     });
-    await download.click();
-    await page
-      .getByRole("dialog", { name: "导出", exact: true })
-      .getByRole("button", { name: "下载 PNG", exact: true })
-      .click();
+    const panel = await openPopover(download);
+    await panel.getByRole("button", { name: "下载 PNG", exact: true }).click();
     await expect
       .poll(() => page.evaluate(() => Boolean(window.__windCapturedDownload)))
       .toBe(true);
     const captured = await page.evaluate(() => window.__windCapturedDownload);
     const bytes = Buffer.from(captured.base64, "base64");
-    await import("node:fs/promises").then(({ writeFile }) =>
-      writeFile(path, bytes),
-    );
+    await writeFile(path, bytes);
     return { bytes, name: captured.name };
   }
   async function dimensions() {
@@ -97,6 +101,7 @@ export function canvasTools(page) {
     close,
     field,
     ready,
+    openPopover,
     language,
     scale,
     png,
