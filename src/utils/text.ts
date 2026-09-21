@@ -1,7 +1,7 @@
 import type { Options } from "./shared";
 
 export function textTool(input: string, options: Options) {
-  const action = options.action || "dedupe";
+  const action = options.textAction || "dedupe";
   const lines = input.replace(/\r\n?/g, "\n").split("\n");
   switch (action) {
     case "dedupe": {
