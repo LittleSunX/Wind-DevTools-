@@ -1,6 +1,7 @@
 import Sidebar, { SidebarIcon, useSidebar } from "./components/Sidebar";
 import CodeEditor from "./components/CodeEditor";
 import CodeImage from "./components/CodeImage";
+import DiffTool from "./components/DiffTool";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { categories, tools } from "./catalog";
 import { trackTool } from "./analytics";
@@ -14,6 +15,13 @@ const defaultOptions: Options = {
   zone: "UTC",
   direction: "timestamp",
   mode: "quartz",
+  codec: "base64",
+  codecDirection: "encode",
+  textAction: "dedupe",
+  target: "typescript",
+  rootName: "Root",
+  prefix: "",
+  suffix: "",
 };
 function Select({
   label,
@@ -207,7 +215,17 @@ export function App({ path = "/tools" }: { path?: string }) {
       setNotice("结果超过代码画布限制（12,000 字符 / 160 行），请精简后再发送。");
       return;
     }
-    const payload = createCanvasTransfer(current.id, output);
+    const transferOverride =
+      current.id === "json-type"
+        ? {
+            language: options.target === "java" ? "java" : "typescript",
+            title:
+              options.target === "java"
+                ? `${options.rootName || "Root"}.java`
+                : `${options.rootName || "Root"}.ts`,
+          }
+        : undefined;
+    const payload = createCanvasTransfer(current.id, output, transferOverride);
     if (!payload) {
       setNotice("当前结果暂不支持发送到代码画布。");
       return;
@@ -481,6 +499,8 @@ export function App({ path = "/tools" }: { path?: string }) {
             </>
           ) : current?.id === "code-image" ? (
             <CodeImage />
+          ) : current?.id === "diff" ? (
+            <DiffTool />
           ) : current ? (
             <>
               <div className="breadcrumb">
@@ -590,6 +610,90 @@ export function App({ path = "/tools" }: { path?: string }) {
                     ]}
                     onChange={(v) => option("mode", v)}
                   />
+                )}
+                {current.id === "codec" && (
+                  <>
+                    <Select
+                      label="编码类型"
+                      value={options.codec!}
+                      items={[
+                        ["base64", "Base64"],
+                        ["url", "URL 编码"],
+                      ]}
+                      onChange={(v) => option("codec", v)}
+                    />
+                    <Select
+                      label="操作"
+                      value={options.codecDirection!}
+                      items={[
+                        ["encode", "编码"],
+                        ["decode", "解码"],
+                      ]}
+                      onChange={(v) => option("codecDirection", v)}
+                    />
+                  </>
+                )}
+                {current.id === "json-type" && (
+                  <>
+                    <Select
+                      label="目标语言"
+                      value={options.target!}
+                      items={[
+                        ["typescript", "TypeScript"],
+                        ["java", "Java"],
+                      ]}
+                      onChange={(v) => option("target", v)}
+                    />
+                    <label className="select-label">
+                      根类型名
+                      <input
+                        aria-label="根类型名"
+                        value={options.rootName || ""}
+                        maxLength={40}
+                        onChange={(event) => option("rootName", event.target.value)}
+                      />
+                    </label>
+                  </>
+                )}
+                {current.id === "text" && (
+                  <>
+                    <Select
+                      label="处理方式"
+                      value={options.textAction!}
+                      items={[
+                        ["dedupe", "按行去重"],
+                        ["sort-asc", "升序排序"],
+                        ["sort-desc", "降序排序"],
+                        ["trim-lines", "每行 Trim"],
+                        ["remove-empty", "删除空行"],
+                        ["upper", "转大写"],
+                        ["lower", "转小写"],
+                        ["prefix", "添加前缀"],
+                        ["suffix", "添加后缀"],
+                      ]}
+                      onChange={(v) => option("textAction", v)}
+                    />
+                    {options.textAction === "prefix" && (
+                      <label className="select-label">
+                        前缀
+                        <input
+                          aria-label="前缀"
+                          value={options.prefix || ""}
+                          onChange={(event) => option("prefix", event.target.value)}
+                        />
+                      </label>
+                    )}
+                    {options.textAction === "suffix" && (
+                      <label className="select-label">
+                        后缀
+                        <input
+                          aria-label="后缀"
+                          value={options.suffix || ""}
+                          onChange={(event) => option("suffix", event.target.value)}
+                        />
+                      </label>
+                    )}
+                  </>
                 )}
                 {(current.id === "timestamp" || current.id === "cron") && (
                   <Select
@@ -718,7 +822,13 @@ export function App({ path = "/tools" }: { path?: string }) {
                           ? "解析 JWT"
                           : current.id === "cron"
                             ? "计算执行时间"
-                            : "格式化"}{" "}
+                            : current.id === "codec"
+                              ? "转换"
+                              : current.id === "json-type"
+                                ? "生成类型"
+                                : current.id === "text"
+                                  ? "处理"
+                                  : "格式化"}{" "}
                       <span aria-hidden="true">↗</span>
                     </button>
                     {current.id === "json" && (

@@ -1370,3 +1370,116 @@ select {
   color: #3659e3;
   background: #edf1ff;
 }
+
+.select-label input {
+  min-width: 140px;
+  border: 1px solid #dcdde2;
+  border-radius: 7px;
+  padding: 8px 10px;
+  color: #4e515b;
+  background: #fff;
+  font-size: 13px;
+}
+.diff-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 22px 0 16px;
+}
+.diff-actions span {
+  margin-left: auto;
+  color: #737d8d;
+  font-size: 12px;
+}
+.diff-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+.diff-result {
+  margin-top: 18px;
+  border: 1px solid #dce2ed;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+.diff-result-header {
+  min-height: 52px;
+  padding: 0 16px;
+  border-bottom: 1px solid #e6e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.diff-result-header strong {
+  font-size: 14px;
+}
+.diff-result-header span {
+  color: #7b8494;
+  font-size: 11px;
+}
+.diff-empty {
+  padding: 52px 20px;
+  text-align: center;
+  color: #8a92a0;
+  font-size: 13px;
+}
+.diff-lines {
+  max-height: 520px;
+  overflow: auto;
+  font: 13px/1.65 Consolas, "Microsoft YaHei", monospace;
+}
+.diff-line {
+  display: grid;
+  grid-template-columns: 28px 48px 48px minmax(0, 1fr);
+  min-height: 25px;
+  border-bottom: 1px solid #f0f2f5;
+}
+.diff-line:last-child {
+  border-bottom: 0;
+}
+.diff-line > span,
+.diff-line > code {
+  padding: 2px 8px;
+}
+.diff-sign {
+  text-align: center;
+  user-select: none;
+}
+.diff-number {
+  text-align: right;
+  color: #9aa2af;
+  user-select: none;
+  border-left: 1px solid #eef0f4;
+}
+.diff-line code {
+  white-space: pre;
+  overflow-x: auto;
+  color: #394359;
+}
+.diff-line.is-add {
+  background: #f1fbf4;
+}
+.diff-line.is-add .diff-sign {
+  color: #237a45;
+}
+.diff-line.is-remove {
+  background: #fff4f4;
+}
+.diff-line.is-remove .diff-sign {
+  color: #b54848;
+}
+@media (max-width: 800px) {
+  .diff-inputs {
+    grid-template-columns: 1fr;
+  }
+  .diff-actions span {
+    width: 100%;
+    margin-left: 0;
+  }
+  .diff-line {
+    grid-template-columns: 24px 38px 38px minmax(0, 1fr);
+  }
+}

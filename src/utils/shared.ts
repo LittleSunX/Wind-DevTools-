@@ -7,6 +7,13 @@ export type Options = {
   zone?: string;
   direction?: string;
   mode?: string;
+  codec?: string;
+  codecDirection?: string;
+  textAction?: string;
+  target?: string;
+  rootName?: string;
+  prefix?: string;
+  suffix?: string;
 };
 export const MAX_BYTES = 5 * 1024 * 1024;
 export function checkInput(input: string) {

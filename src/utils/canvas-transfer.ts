@@ -16,18 +16,22 @@ const transferByTool: Record<
   jwt: { language: "plain", title: "jwt.txt" },
   cron: { language: "plain", title: "cron.txt" },
   timestamp: { language: "plain", title: "timestamp.txt" },
+  codec: { language: "plain", title: "encoded.txt" },
+  text: { language: "plain", title: "text.txt" },
+  "json-type": { language: "plain", title: "types.txt" },
 };
 
 export function createCanvasTransfer(
   sourceTool: string,
   code: string,
+  override?: Partial<Pick<CanvasTransferPayload, "language" | "title">>,
 ): CanvasTransferPayload | null {
   const preset = transferByTool[sourceTool];
   if (!preset || !code.trim()) return null;
   return {
     code,
-    language: preset.language,
-    title: preset.title,
+    language: override?.language || preset.language,
+    title: override?.title || preset.title,
     sourceTool,
   };
 }

@@ -25,6 +25,15 @@ self.onmessage = async (
       case "cron":
         result = (await import("./utils/cron")).cronTool(input, options);
         break;
+      case "codec":
+        result = (await import("./utils/codec")).codecTool(input, options);
+        break;
+      case "json-type":
+        result = (await import("./utils/json-type")).jsonTypeTool(input, options);
+        break;
+      case "text":
+        result = (await import("./utils/text")).textTool(input, options);
+        break;
       default:
         throw new Error("未知工具。");
     }

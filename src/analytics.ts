@@ -17,6 +17,9 @@ const actions = [
   "parse",
   "export",
   "copy_image",
+  "copy",
+  "send_to_canvas",
+  "export_svg",
 ];
 // Rebuild rather than redact: unrecognized fields and free-form values never leave the page.
 export function sanitizeAnalytics(payload: Payload, pathname: string): Payload {
