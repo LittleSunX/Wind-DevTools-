@@ -596,7 +596,7 @@ export default function CodeImage() {
               windowRadius: preset.windowRadius,
               shadow: preset.shadow,
               aspectRatio: preset.aspectRatio,
-              windowBar: preset.windowStyle !== "none",
+              windowBar: true,
               ...("color" in preset ? { color: preset.color } : {}),
             }));
           },
