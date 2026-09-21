@@ -14,8 +14,17 @@ for (const [name, engine] of [
     viewport: { width: 1440, height: 1200 },
   });
   page.setDefaultTimeout(15000);
-  const { download, editor, artwork, close, field, ready, openPopover, scale, png } =
-    canvasTools(page);
+  const {
+    download,
+    editor,
+    artwork,
+    close,
+    field,
+    ready,
+    openPopover,
+    scale,
+    png,
+  } = canvasTools(page);
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   try {
