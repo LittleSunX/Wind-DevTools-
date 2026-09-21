@@ -1,5 +1,10 @@
 export type DiffKind = "same" | "add" | "remove";
-export type DiffLine = { kind: DiffKind; text: string; left?: number; right?: number };
+export type DiffLine = {
+  kind: DiffKind;
+  text: string;
+  left?: number;
+  right?: number;
+};
 
 export function diffLines(leftText: string, rightText: string): DiffLine[] {
   const split = (value: string) =>
@@ -22,24 +27,38 @@ export function diffLines(leftText: string, rightText: string): DiffLine[] {
   }
 
   const result: DiffLine[] = [];
-  let i = 0, j = 0, leftNo = 1, rightNo = 1;
+  let i = 0,
+    j = 0,
+    leftNo = 1,
+    rightNo = 1;
   while (i < left.length && j < right.length) {
     if (left[i] === right[j]) {
-      result.push({ kind: "same", text: left[i], left: leftNo++, right: rightNo++ });
-      i++; j++;
+      result.push({
+        kind: "same",
+        text: left[i],
+        left: leftNo++,
+        right: rightNo++,
+      });
+      i++;
+      j++;
     } else if (dp[(i + 1) * cols + j] >= dp[i * cols + j + 1]) {
       result.push({ kind: "remove", text: left[i++], left: leftNo++ });
     } else {
       result.push({ kind: "add", text: right[j++], right: rightNo++ });
     }
   }
-  while (i < left.length) result.push({ kind: "remove", text: left[i++], left: leftNo++ });
-  while (j < right.length) result.push({ kind: "add", text: right[j++], right: rightNo++ });
+  while (i < left.length)
+    result.push({ kind: "remove", text: left[i++], left: leftNo++ });
+  while (j < right.length)
+    result.push({ kind: "add", text: right[j++], right: rightNo++ });
   return result;
 }
 
 export function formatUnifiedDiff(lines: DiffLine[]) {
   return lines
-    .map((line) => `${line.kind === "add" ? "+" : line.kind === "remove" ? "-" : " "} ${line.text}`)
+    .map(
+      (line) =>
+        `${line.kind === "add" ? "+" : line.kind === "remove" ? "-" : " "} ${line.text}`,
+    )
     .join("\n");
 }

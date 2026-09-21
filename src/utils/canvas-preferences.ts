@@ -7,7 +7,14 @@ export function sanitizePreferences(value: unknown): Partial<ImageOptions> {
   const result: Record<string, unknown> = {};
   const enums: Record<string, readonly unknown[]> = {
     theme: ["night", "graphite", "light", "forest", "paper"],
-    background: ["blue", "sunset", "slate", "solid", "custom-gradient", "transparent"],
+    background: [
+      "blue",
+      "sunset",
+      "slate",
+      "solid",
+      "custom-gradient",
+      "transparent",
+    ],
     fontFamily: ["jetbrains", "source", "system"],
     lineHeight: [1.4, 1.65, 1.9],
     fontSize: [14, 16, 18, 20, 24],
@@ -27,7 +34,10 @@ export function sanitizePreferences(value: unknown): Partial<ImageOptions> {
   if (typeof data.color === "string" && /^#[\da-f]{6}$/i.test(data.color))
     result.color = data.color;
   for (const key of ["gradientStart", "gradientEnd"])
-    if (typeof data[key] === "string" && /^#[\da-f]{6}$/i.test(data[key] as string))
+    if (
+      typeof data[key] === "string" &&
+      /^#[\da-f]{6}$/i.test(data[key] as string)
+    )
       result[key] = data[key];
   if (
     typeof data.gradientAngle === "number" &&

@@ -33,5 +33,7 @@ export function codecTool(input: string, options: Options) {
       throw new Error("URL 解码失败，请检查百分号编码是否完整。");
     }
   }
-  return direction === "encode" ? encodeBase64Utf8(input) : decodeBase64Utf8(input);
+  return direction === "encode"
+    ? encodeBase64Utf8(input)
+    : decodeBase64Utf8(input);
 }

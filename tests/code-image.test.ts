@@ -74,7 +74,6 @@ it("creates a sortable local timestamp filename", () => {
   expect(imageFilename(date, "svg")).toBe("wind-code-20260918-090502-007.svg");
 });
 
-
 describe("advanced canvas helpers", () => {
   it("parses highlighted displayed line numbers with ranges", () => {
     expect([...parseHighlightedLines("101, 103-105, 999", 100, 6)]).toEqual([
@@ -89,21 +88,23 @@ describe("advanced canvas helpers", () => {
   });
 });
 
-
 describe("canvas export data helpers", () => {
   it("extracts pure Base64 from a PNG data URL", () => {
     expect(dataUrlToBase64("data:image/png;base64,abc123")).toBe("abc123");
   });
 
   it("decodes URL-encoded SVG source", () => {
-    const source = '<svg xmlns="http://www.w3.org/2000/svg"><text>Wind 中文</text></svg>';
+    const source =
+      '<svg xmlns="http://www.w3.org/2000/svg"><text>Wind 中文</text></svg>';
     expect(
-      svgDataUrlToSource(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(source)}`),
+      svgDataUrlToSource(
+        `data:image/svg+xml;charset=utf-8,${encodeURIComponent(source)}`,
+      ),
     ).toBe(source);
   });
 
   it("decodes Base64 SVG source", () => {
-    const source = '<svg><text>Wind</text></svg>';
+    const source = "<svg><text>Wind</text></svg>";
     expect(
       svgDataUrlToSource(
         `data:image/svg+xml;base64,${Buffer.from(source).toString("base64")}`,

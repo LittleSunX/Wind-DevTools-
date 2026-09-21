@@ -1429,7 +1429,10 @@ select {
 .diff-lines {
   max-height: 520px;
   overflow: auto;
-  font: 13px/1.65 Consolas, "Microsoft YaHei", monospace;
+  font:
+    13px/1.65 Consolas,
+    "Microsoft YaHei",
+    monospace;
 }
 .diff-line {
   display: grid;

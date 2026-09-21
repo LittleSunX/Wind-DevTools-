@@ -64,7 +64,9 @@ export default function DiffTool() {
           <h1>文本 Diff</h1>
           <p>并排比较两段文本，快速定位新增、删除和未变化的行。</p>
         </div>
-        <span className="tool-icon" aria-hidden="true">±</span>
+        <span className="tool-icon" aria-hidden="true">
+          ±
+        </span>
       </section>
       <div className="privacy-banner">
         <span>⌑</span> 比较只在当前浏览器完成，不上传文本内容。
@@ -82,14 +84,20 @@ export default function DiffTool() {
         >
           清空
         </button>
-        <span>{added} 行新增 · {removed} 行删除</span>
-        <button disabled={!lines.length} onClick={copyDiff}>复制统一 Diff</button>
+        <span>
+          {added} 行新增 · {removed} 行删除
+        </span>
+        <button disabled={!lines.length} onClick={copyDiff}>
+          复制统一 Diff
+        </button>
       </div>
 
       <div className="diff-inputs">
         <section className="editor-panel">
           <div className="editor-header">
-            <label htmlFor="diff-left">原始文本 <span>BEFORE</span></label>
+            <label htmlFor="diff-left">
+              原始文本 <span>BEFORE</span>
+            </label>
           </div>
           <textarea
             id="diff-left"
@@ -105,7 +113,9 @@ export default function DiffTool() {
         </section>
         <section className="editor-panel">
           <div className="editor-header">
-            <label htmlFor="diff-right">修改后文本 <span>AFTER</span></label>
+            <label htmlFor="diff-right">
+              修改后文本 <span>AFTER</span>
+            </label>
           </div>
           <textarea
             id="diff-right"
@@ -121,7 +131,11 @@ export default function DiffTool() {
         </section>
       </div>
 
-      {error && <div className="error-box" role="alert">{error}</div>}
+      {error && (
+        <div className="error-box" role="alert">
+          {error}
+        </div>
+      )}
 
       <section className="diff-result" aria-label="Diff 结果">
         <div className="diff-result-header">
@@ -129,13 +143,19 @@ export default function DiffTool() {
           <span>绿色新增 · 红色删除</span>
         </div>
         {!lines.length && !error ? (
-          <div className="diff-empty">输入两侧文本后，这里会实时显示行级差异。</div>
+          <div className="diff-empty">
+            输入两侧文本后，这里会实时显示行级差异。
+          </div>
         ) : (
           <div className="diff-lines">
             {lines.map((line, index) => (
               <div className={`diff-line is-${line.kind}`} key={index}>
                 <span className="diff-sign">
-                  {line.kind === "add" ? "+" : line.kind === "remove" ? "−" : " "}
+                  {line.kind === "add"
+                    ? "+"
+                    : line.kind === "remove"
+                      ? "−"
+                      : " "}
                 </span>
                 <span className="diff-number">{line.left ?? ""}</span>
                 <span className="diff-number">{line.right ?? ""}</span>
@@ -145,10 +165,15 @@ export default function DiffTool() {
           </div>
         )}
       </section>
-      <div className="notice" role="status">{notice}</div>
+      <div className="notice" role="status">
+        {notice}
+      </div>
       <section className="instructions">
         <h2>使用说明</h2>
-        <p>按行比较文本，适合代码、配置、SQL、日志和普通文本。单侧最多 1,200 行，避免浏览器在超大文本比较时占用过多内存。</p>
+        <p>
+          按行比较文本，适合代码、配置、SQL、日志和普通文本。单侧最多 1,200
+          行，避免浏览器在超大文本比较时占用过多内存。
+        </p>
       </section>
     </>
   );

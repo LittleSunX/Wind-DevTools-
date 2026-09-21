@@ -54,7 +54,6 @@ export async function exportCanvas(
   return blob;
 }
 
-
 export async function exportCanvasSvg(
   node: HTMLElement,
   options: ImageOptions,
@@ -80,7 +79,6 @@ export async function exportCanvasSvg(
     style: { transform: "none", margin: "0", boxShadow: "none" },
   });
 }
-
 
 export function blobToDataUrl(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {

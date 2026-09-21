@@ -21,9 +21,9 @@ describe("codec tool", () => {
       codecDirection: "encode",
     });
     expect(encoded).toContain("%");
-    expect(
-      codecTool(encoded, { codec: "url", codecDirection: "decode" }),
-    ).toBe("a b/中文?x=1&y=2");
+    expect(codecTool(encoded, { codec: "url", codecDirection: "decode" })).toBe(
+      "a b/中文?x=1&y=2",
+    );
   });
 
   it("rejects malformed encoded input", () => {
@@ -38,9 +38,7 @@ describe("codec tool", () => {
 
 describe("batch text tool", () => {
   it("deduplicates while preserving first occurrence", () => {
-    expect(textTool("b\na\nb\na\nc", { textAction: "dedupe" })).toBe(
-      "b\na\nc",
-    );
+    expect(textTool("b\na\nb\na\nc", { textAction: "dedupe" })).toBe("b\na\nc");
   });
 
   it("trims, removes blanks and adds affixes", () => {
@@ -48,9 +46,9 @@ describe("batch text tool", () => {
       "a\n\nb",
     );
     expect(textTool("a\n \nb", { textAction: "remove-empty" })).toBe("a\nb");
-    expect(
-      textTool("a\nb", { textAction: "prefix", prefix: "- " }),
-    ).toBe("- a\n- b");
+    expect(textTool("a\nb", { textAction: "prefix", prefix: "- " })).toBe(
+      "- a\n- b",
+    );
     expect(textTool("a\nb", { textAction: "suffix", suffix: ";" })).toBe(
       "a;\nb;",
     );

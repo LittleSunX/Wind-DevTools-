@@ -258,9 +258,18 @@ export function parseHighlightedLines(
     if (range) {
       const start = Number(range[1]);
       const end = Number(range[2]);
-      if (!Number.isInteger(start) || !Number.isInteger(end) || start < 1 || end < start)
+      if (
+        !Number.isInteger(start) ||
+        !Number.isInteger(end) ||
+        start < 1 ||
+        end < start
+      )
         continue;
-      for (let line = Math.max(start, startLine); line <= Math.min(end, lastLine); line++)
+      for (
+        let line = Math.max(start, startLine);
+        line <= Math.min(end, lastLine);
+        line++
+      )
         result.add(line);
       continue;
     }

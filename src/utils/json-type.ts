@@ -2,12 +2,7 @@ import { jsonTool } from "./json";
 import type { Options } from "./shared";
 
 type JsonValue =
-  | null
-  | boolean
-  | number
-  | string
-  | JsonValue[]
-  | { [key: string]: JsonValue };
+  null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 
 function parseJson(input: string): JsonValue {
   jsonTool(input, { action: "validate" });
@@ -24,7 +19,11 @@ function titleCase(name: string) {
   return id.charAt(0).toUpperCase() + id.slice(1);
 }
 
-function tsType(value: JsonValue, name: string, defs: Map<string, string>): string {
+function tsType(
+  value: JsonValue,
+  name: string,
+  defs: Map<string, string>,
+): string {
   if (value === null) return "null";
   if (Array.isArray(value)) {
     if (!value.length) return "unknown[]";
@@ -44,7 +43,10 @@ function tsType(value: JsonValue, name: string, defs: Map<string, string>): stri
         const childName = `${typeName}${titleCase(key)}`;
         return `  ${JSON.stringify(key)}: ${tsType(item, childName, defs)};`;
       });
-      defs.set(typeName, `export interface ${typeName} {\n${fields.join("\n")}\n}`);
+      defs.set(
+        typeName,
+        `export interface ${typeName} {\n${fields.join("\n")}\n}`,
+      );
       return typeName;
     }
   }
@@ -96,10 +98,9 @@ export function jsonTypeTool(input: string, options: Options) {
       !Array.isArray(value) &&
       defs.has(rootName)
     ) {
-      const root = defs.get(rootName)!.replace(
-        `class ${rootName}`,
-        `public class ${rootName}`,
-      );
+      const root = defs
+        .get(rootName)!
+        .replace(`class ${rootName}`, `public class ${rootName}`);
       const children = [...defs.entries()]
         .filter(([name]) => name !== rootName)
         .map(([, definition]) => definition)

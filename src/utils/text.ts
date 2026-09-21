@@ -6,11 +6,13 @@ export function textTool(input: string, options: Options) {
   switch (action) {
     case "dedupe": {
       const seen = new Set<string>();
-      return lines.filter((line) => {
-        if (seen.has(line)) return false;
-        seen.add(line);
-        return true;
-      }).join("\n");
+      return lines
+        .filter((line) => {
+          if (seen.has(line)) return false;
+          seen.add(line);
+          return true;
+        })
+        .join("\n");
     }
     case "sort-asc":
       return [...lines].sort((a, b) => a.localeCompare(b, "zh-CN")).join("\n");

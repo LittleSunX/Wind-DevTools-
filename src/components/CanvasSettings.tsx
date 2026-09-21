@@ -288,7 +288,10 @@ export default function CanvasSettings({
           max={9999}
           value={options.startLine}
           onChange={(e) =>
-            update("startLine", Math.max(1, Math.min(9999, Number(e.target.value) || 1)))
+            update(
+              "startLine",
+              Math.max(1, Math.min(9999, Number(e.target.value) || 1)),
+            )
           }
           disabled={exporting}
         />

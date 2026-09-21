@@ -312,10 +312,15 @@ export default function CodeImage() {
       };
       changeCode(text);
       if (byExtension[ext]) setLanguage(byExtension[ext]);
-      setOptions((previous) => ({ ...previous, title: file.name.slice(0, 80) }));
+      setOptions((previous) => ({
+        ...previous,
+        title: file.name.slice(0, 80),
+      }));
       setNotice(`已导入 ${file.name}，内容仅在浏览器中读取。`);
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "文件读取失败，请重试。");
+      setNotice(
+        error instanceof Error ? error.message : "文件读取失败，请重试。",
+      );
     }
   }
   function hideActionMenu(target: HTMLElement) {
@@ -374,9 +379,7 @@ export default function CodeImage() {
         mode === "data-url" ? dataUrl : dataUrlToBase64(dataUrl),
       );
       setNotice(
-        mode === "data-url"
-          ? "PNG Data URL 已复制。"
-          : "PNG Base64 已复制。",
+        mode === "data-url" ? "PNG Data URL 已复制。" : "PNG Base64 已复制。",
       );
       trackTool("code-image", action, "success");
     } catch (error) {
@@ -434,7 +437,9 @@ export default function CodeImage() {
       trackTool("code-image", "export", "success");
     } catch (error) {
       trackTool("code-image", "export", "error");
-      setNotice(error instanceof Error ? error.message : "PNG 导出失败，请重试。");
+      setNotice(
+        error instanceof Error ? error.message : "PNG 导出失败，请重试。",
+      );
     } finally {
       setExporting(false);
     }
@@ -454,7 +459,9 @@ export default function CodeImage() {
       trackTool("code-image", "export_svg", "success");
     } catch (error) {
       trackTool("code-image", "export_svg", "error");
-      setNotice(error instanceof Error ? error.message : "SVG 导出失败，请重试。");
+      setNotice(
+        error instanceof Error ? error.message : "SVG 导出失败，请重试。",
+      );
     } finally {
       setExporting(false);
     }
@@ -679,7 +686,11 @@ export default function CodeImage() {
             disabled={!canExport || exporting}
           >
             <div className="canvas-export-menu">
-              <div className="canvas-export-scale" role="group" aria-label="PNG 导出倍率">
+              <div
+                className="canvas-export-scale"
+                role="group"
+                aria-label="PNG 导出倍率"
+              >
                 <span>PNG 导出倍率</span>
                 <div>
                   {[1, 2, 3].map((scale) => (
@@ -832,7 +843,9 @@ export default function CodeImage() {
               }}
             >
               {options.windowBar && options.windowStyle !== "none" && (
-                <div className={`canvas-windowbar style-${options.windowStyle}`}>
+                <div
+                  className={`canvas-windowbar style-${options.windowStyle}`}
+                >
                   {options.windowStyle === "mac" && (
                     <div className="canvas-window-dots" aria-hidden="true">
                       <span />
@@ -841,7 +854,9 @@ export default function CodeImage() {
                     </div>
                   )}
                   {options.windowStyle === "minimal" && (
-                    <div className="canvas-window-minimal" aria-hidden="true">•••</div>
+                    <div className="canvas-window-minimal" aria-hidden="true">
+                      •••
+                    </div>
                   )}
                   <div className="canvas-title" style={{ color: theme.muted }}>
                     <span aria-hidden="true">{options.title || "\u00a0"}</span>
@@ -910,7 +925,9 @@ export default function CodeImage() {
         <details>
           <summary>使用说明 · 编辑与导出</summary>
           <p>
-            在画布上直接输入代码、修改标题。可自定义渐变背景、窗口样式、画布比例、起始行号和高亮行；缩放只影响查看比例，导出使用实际尺寸。PNG / SVG 不包含光标、选区和操作控件。支持 28 种语言与格式，以及 1× / 2× / 3× PNG 导出。中文和未覆盖字符使用系统字体回退。
+            在画布上直接输入代码、修改标题。可自定义渐变背景、窗口样式、画布比例、起始行号和高亮行；缩放只影响查看比例，导出使用实际尺寸。PNG
+            / SVG 不包含光标、选区和操作控件。支持 28 种语言与格式，以及 1× / 2×
+            / 3× PNG 导出。中文和未覆盖字符使用系统字体回退。
           </p>
           <p>
             所有内容在浏览器内处理，不执行或上传代码。仅记住外观设置，不保存代码或标题。最多支持
