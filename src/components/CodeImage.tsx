@@ -11,6 +11,7 @@ import CanvasCode from "./CanvasCode";
 import { loadCanvasFont } from "../utils/canvas-fonts";
 import { exportCanvas, exportCanvasSvg } from "../utils/canvas-export";
 import { readPreferences, writePreferences } from "../utils/canvas-preferences";
+import { readCanvasTransfer } from "../utils/canvas-transfer";
 import { sampleForLanguage } from "../utils/code-samples";
 import { trackTool } from "../analytics";
 import {
@@ -62,11 +63,24 @@ export default function CodeImage() {
   const highlighted = tokens?.code === code && tokens.language === language;
   const segments = highlighted ? tokens.segments : [{ text: code, type: "" }];
   useEffect(() => {
+    let nextOptions = { ...defaults };
     try {
-      setOptions(readPreferences(localStorage));
+      nextOptions = readPreferences(localStorage);
     } catch {
       /* Optional storage. */
     }
+    try {
+      const transfer = readCanvasTransfer(sessionStorage);
+      if (transfer) {
+        setCode(transfer.code);
+        setLanguage(transfer.language);
+        nextOptions = { ...nextOptions, title: transfer.title };
+        setNotice("已接收其他工具的处理结果，可以直接调整样式并导出。");
+      }
+    } catch {
+      /* Optional storage. */
+    }
+    setOptions(nextOptions);
     setPreferencesLoaded(true);
   }, []);
   useEffect(() => {
