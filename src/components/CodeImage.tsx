@@ -406,7 +406,7 @@ export default function CodeImage() {
           <h1>代码画布</h1>
           <p>直接在画布中写下代码，把眼前的作品带走。</p>
         </div>
-        <span className="shot-badge">LOCAL · PNG</span>
+        <span className="shot-badge">LOCAL · PNG / SVG</span>
       </section>
       <div className="shot-toolbar canvas-toolbar" aria-label="画布工具栏">
         <CanvasPopover
@@ -745,9 +745,7 @@ export default function CodeImage() {
         <details>
           <summary>使用说明 · 编辑与导出</summary>
           <p>
-            在画布上直接输入代码、修改标题。画布会随内容增高；缩放只影响查看比例，导出使用实际尺寸。PNG
-            不包含光标、选区和操作控件。支持 28 种语言与格式，以及 1× / 2× / 3×
-            导出。中文和未覆盖字符使用系统字体回退。
+            在画布上直接输入代码、修改标题。可自定义渐变背景、窗口样式、画布比例、起始行号和高亮行；缩放只影响查看比例，导出使用实际尺寸。PNG / SVG 不包含光标、选区和操作控件。支持 28 种语言与格式，以及 1× / 2× / 3× PNG 导出。中文和未覆盖字符使用系统字体回退。
           </p>
           <p>
             所有内容在浏览器内处理，不执行或上传代码。仅记住外观设置，不保存代码或标题。最多支持
