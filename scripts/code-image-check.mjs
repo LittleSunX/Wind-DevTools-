@@ -20,6 +20,7 @@ const {
   field,
   ready,
   language,
+  scale,
   png,
   dimensions,
 } = canvasTools(page);
@@ -37,7 +38,7 @@ try {
     await page.locator(".shot-layout, .shot-preview-stage").count(),
     0,
   );
-  await (await field("导出倍率")).selectOption("1");
+  await scale(1);
   await ready();
   // Use an integer origin for raster comparison; small glyph antialias differences are allowed.
   await page
@@ -58,12 +59,12 @@ try {
     (await comparePixels(page, first.bytes, zoomed.bytes)).ratio < 0.001,
   );
   await (await field("画布缩放")).selectOption("1");
-  await (await field("导出倍率")).selectOption("3");
+  await scale(3);
   await ready();
   const scaled = await png("artifacts/canvas-3x.png");
   assert.equal(scaled.bytes.readUInt32BE(16), original.w * 3);
   assert.equal(scaled.bytes.readUInt32BE(20), original.h * 3);
-  await (await field("导出倍率")).selectOption("1");
+  await scale(1);
   await editor.fill(
     'const 中文 = "👨‍👩‍👧‍👦 <script>alert(1)</script>";\n\tconst token = "PRIVATE_SOURCE_47219";\n',
   );
@@ -96,7 +97,11 @@ try {
     (await comparePixels(page, titleExport.bytes, selectedExport.bytes)).ratio <
       0.001,
   );
-  await page.getByRole("button", { name: "复制图片", exact: true }).click();
+  await page.getByRole("button", { name: "复制 / 分享", exact: true }).click();
+  await page
+    .getByRole("dialog", { name: "复制 / 分享", exact: true })
+    .getByRole("button", { name: "复制图片", exact: true })
+    .click();
   await page.getByRole("status").filter({ hasText: "图片已复制" }).waitFor();
   assert.ok(
     await page.evaluate(async () =>
@@ -234,7 +239,7 @@ try {
   await failed.getByRole("button", { name: /^外观设置/ }).click();
   await failed.getByLabel("字体", { exact: true }).selectOption("system");
   await expect(
-    failed.getByRole("button", { name: "下载 PNG", exact: true }),
+    failed.getByRole("button", { name: "导出", exact: true }),
   ).toBeEnabled();
   await failed.close();
   assert.deepEqual(errors, []);
