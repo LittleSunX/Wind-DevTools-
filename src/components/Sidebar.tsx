@@ -5,12 +5,15 @@ const preferenceKey = "wind.sidebar.collapsed";
 
 export function useSidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const [pinned, setPinned] = useState(false);
+  const desktop = useRef<HTMLElement>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const mobileToggle = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     try {
       setCollapsed(localStorage.getItem(preferenceKey) === "true");
+      setPinned(localStorage.getItem("wind.sidebar.pinned") === "true");
     } catch {
       /* Navigation remains available when storage is blocked. */
     }
@@ -27,6 +30,61 @@ export function useSidebar() {
       document.body.style.overflow = previous;
     };
   }, [mobileOpen]);
+  useEffect(() => {
+    const node = desktop.current;
+    if (!node || collapsed || pinned) return;
+    const media = window.matchMedia("(min-width: 801px)");
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const cancel = () => clearTimeout(timer);
+    const schedule = () => {
+      cancel();
+      if (
+        !media.matches ||
+        document.hidden ||
+        node.matches(":hover") ||
+        node.contains(document.activeElement)
+      )
+        return;
+      timer = setTimeout(() => {
+        if (
+          media.matches &&
+          !document.hidden &&
+          !node.matches(":hover") &&
+          !node.contains(document.activeElement)
+        )
+          setCollapsed(true);
+      }, 30000);
+    };
+    const afterBlur = () => {
+      cancel();
+      timer = setTimeout(schedule, 0);
+    };
+    node.addEventListener("pointerenter", cancel);
+    node.addEventListener("pointerleave", schedule);
+    node.addEventListener("focusin", cancel);
+    node.addEventListener("focusout", afterBlur);
+    media.addEventListener("change", schedule);
+    document.addEventListener("visibilitychange", schedule);
+    schedule();
+    return () => {
+      cancel();
+      node.removeEventListener("pointerenter", cancel);
+      node.removeEventListener("pointerleave", schedule);
+      node.removeEventListener("focusin", cancel);
+      node.removeEventListener("focusout", afterBlur);
+      media.removeEventListener("change", schedule);
+      document.removeEventListener("visibilitychange", schedule);
+    };
+  }, [collapsed, pinned]);
+  function togglePin() {
+    const next = !pinned;
+    setPinned(next);
+    try {
+      localStorage.setItem("wind.sidebar.pinned", String(next));
+    } catch {
+      /* Optional preference. */
+    }
+  }
   function toggleDesktop() {
     const next = !collapsed;
     setCollapsed(next);
@@ -50,6 +108,9 @@ export function useSidebar() {
   }
   return {
     collapsed,
+    pinned,
+    desktop,
+    togglePin,
     mobileOpen,
     dialog,
     mobileToggle,

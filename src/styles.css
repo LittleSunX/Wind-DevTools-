@@ -1356,3 +1356,17 @@ select {
     display: none;
   }
 }
+
+.sidebar-pin {
+  align-self: flex-end;
+  font-size: 11px;
+  padding: 6px 8px;
+  margin: -16px 0 18px;
+  background: transparent;
+  border-color: transparent;
+  color: #737d8d;
+}
+.sidebar-pin[aria-pressed="true"] {
+  color: #3659e3;
+  background: #edf1ff;
+}

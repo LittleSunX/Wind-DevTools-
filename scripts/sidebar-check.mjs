@@ -102,6 +102,60 @@ for (const [name, engine] of [
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     );
+    // Advance only the idle clock; exercise hover, focus, pinning and preference isolation.
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.clock.install();
+    await page.mouse.move(900, 200);
+    await page.reload();
+    const collapseButton = page.getByRole("button", {
+      name: "收起侧边栏",
+      exact: true,
+    });
+    await expect(collapseButton).toBeVisible();
+    await page.clock.runFor(29000);
+    await expect(collapseButton).toBeVisible();
+    await page.clock.runFor(1500);
+    await expect(
+      page.getByRole("button", { name: "展开侧边栏", exact: true }),
+    ).toBeVisible();
+    assert.equal(
+      await page.evaluate(() => localStorage.getItem("wind.sidebar.collapsed")),
+      "false",
+    );
+    await page.reload();
+    await expect(collapseButton).toBeVisible();
+    await page.locator("#desktop-sidebar").hover();
+    await page.clock.runFor(31000);
+    await expect(collapseButton).toBeVisible();
+    await page.mouse.move(900, 200);
+    const navLink = page
+      .locator("#desktop-sidebar")
+      .getByRole("link", { name: "代码画布", exact: true });
+    await navLink.focus();
+    await page.clock.runFor(31000);
+    await expect(collapseButton).toBeVisible();
+    await page.getByLabel("代码", { exact: true }).focus();
+    await page.clock.runFor(31000);
+    await expect(
+      page.getByRole("button", { name: "展开侧边栏", exact: true }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "展开侧边栏", exact: true }).click();
+    await page.getByRole("button", { name: "固定展开", exact: true }).click();
+    await page.mouse.move(900, 200);
+    await page.getByLabel("代码", { exact: true }).focus();
+    await page.clock.runFor(60000);
+    await expect(collapseButton).toBeVisible();
+    await page.reload();
+    await expect(
+      page.getByRole("button", { name: "已固定展开", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await page.getByRole("button", { name: "已固定展开", exact: true }).click();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await open.click();
+    await page.clock.runFor(60000);
+    await expect(drawer).toBeVisible();
+    await page.keyboard.press("Escape");
+    await page.clock.resume();
     await page.addInitScript(() =>
       Object.defineProperty(window, "localStorage", {
         get() {

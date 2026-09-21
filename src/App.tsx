@@ -256,9 +256,25 @@ export function App({ path = "/tools" }: { path?: string }) {
       <div className="layout">
         <aside
           id="desktop-sidebar"
+          ref={sidebar.desktop}
           className={`sidebar ${sidebar.collapsed ? "is-collapsed" : ""}`}
           aria-label="侧边栏"
         >
+          {!sidebar.collapsed && (
+            <button
+              className="sidebar-pin"
+              type="button"
+              aria-pressed={sidebar.pinned}
+              onClick={sidebar.togglePin}
+              title={
+                sidebar.pinned
+                  ? "取消固定后，侧栏闲置 30 秒自动收起"
+                  : "固定后侧栏不会自动收起"
+              }
+            >
+              {sidebar.pinned ? "已固定展开" : "固定展开"}
+            </button>
+          )}
           <Sidebar
             currentId={current?.id}
             isHome={isHome}
