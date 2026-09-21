@@ -215,7 +215,17 @@ export function App({ path = "/tools" }: { path?: string }) {
       setNotice("结果超过代码画布限制（12,000 字符 / 160 行），请精简后再发送。");
       return;
     }
-    const payload = createCanvasTransfer(current.id, output);
+    const transferOverride =
+      current.id === "json-type"
+        ? {
+            language: options.target === "java" ? "java" : "typescript",
+            title:
+              options.target === "java"
+                ? `${options.rootName || "Root"}.java`
+                : `${options.rootName || "Root"}.ts`,
+          }
+        : undefined;
+    const payload = createCanvasTransfer(current.id, output, transferOverride);
     if (!payload) {
       setNotice("当前结果暂不支持发送到代码画布。");
       return;
