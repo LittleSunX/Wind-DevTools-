@@ -2,22 +2,14 @@ import { useEffect } from "react";
 import {
   i18n,
   languageKey,
-  resolveLanguage,
   supportedLanguages,
+  type Language,
 } from "../i18n";
+import { localizedPath, parseLocalizedPath } from "../i18n/routing";
 import { tr, useLocale } from "../i18n/react";
 
 export default function LanguageSwitcher() {
   const language = useLocale();
-  useEffect(() => {
-    let saved: string | null = null;
-    try {
-      saved = localStorage.getItem(languageKey);
-    } catch {
-      /* Optional preference. */
-    }
-    void i18n.changeLanguage(resolveLanguage(saved, navigator.languages));
-  }, []);
   useEffect(() => {
     document.documentElement.lang = language === "zh" ? "zh-CN" : language;
   }, [language]);
@@ -27,8 +19,19 @@ export default function LanguageSwitcher() {
       aria-label={tr("界面语言")}
       value={language}
       onChange={(event) => {
-        const next = event.target.value;
+        const next = event.target.value as Language;
+        const route = parseLocalizedPath(window.location.pathname).path;
+        const nextPath = localizedPath(route, next);
         void i18n.changeLanguage(next);
+        history.replaceState(
+          history.state,
+          "",
+          `${nextPath}${window.location.search}${window.location.hash}`,
+        );
+        const canonical = document.querySelector<HTMLLinkElement>(
+          'link[rel="canonical"]',
+        );
+        if (canonical) canonical.href = new URL(nextPath, location.origin).href;
         try {
           localStorage.setItem(languageKey, next);
         } catch {
