@@ -1,4 +1,5 @@
 import { tr, useLocale } from "../i18n/react";
+import { localizedPath } from "../i18n/routing";
 import { useEffect, useRef, useState } from "react";
 import { tools } from "../catalog";
 
@@ -150,14 +151,16 @@ export default function Sidebar({
   collapsed?: boolean;
   onNavigate?: () => void;
 }) {
-  useLocale();
+  const locale = useLocale();
+  const href = (path: string) =>
+    localizedPath(path, locale === "en" ? "en" : "zh");
   return (
     <>
       <div className="sidebar-caption">WORKSPACE</div>
       <nav aria-label={tr("工具导航")} onClick={onNavigate}>
         <a
           className={`side-home ${isHome ? "selected" : ""}`}
-          href="/tools"
+          href={href("/tools")}
           aria-label={tr("全部工具")}
           aria-current={isHome ? "page" : undefined}
           title={tr(collapsed ? "全部工具" : undefined)}
@@ -172,7 +175,7 @@ export default function Sidebar({
         {tools.map((t) => (
           <a
             className={`side-link ${currentId === t.id ? "selected" : ""}`}
-            href={`/tools/${t.id}`}
+            href={href(`/tools/${t.id}`)}
             key={t.id}
             aria-label={tr(t.name)}
             aria-current={currentId === t.id ? "page" : undefined}
