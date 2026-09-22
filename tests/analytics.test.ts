@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { sanitizeAnalytics } from "../src/analytics";
+
 describe("analytics whitelist", () => {
   it("discards free-form input, errors, query strings and referrer paths", () => {
     const safe = sanitizeAnalytics(
@@ -29,11 +30,33 @@ describe("analytics whitelist", () => {
       status: "error",
     });
   });
-  it("reduces arbitrary unknown paths to a fixed 404 route", () =>
+
+  it("keeps English SEO routes distinct from Chinese routes", () => {
+    expect(sanitizeAnalytics({}, "/en/tools/json")).toMatchObject({
+      url: "/en/tools/json",
+      title: "JSON Formatter | Wind DevTools",
+    });
+    expect(sanitizeAnalytics({}, "/en/tools/")).toEqual({
+      url: "/en/tools",
+      title: "Wind DevTools",
+    });
+    expect(sanitizeAnalytics({}, "/en")).toEqual({
+      url: "/en/tools",
+      title: "Wind DevTools",
+    });
+  });
+
+  it("reduces arbitrary unknown paths to fixed localized 404 routes", () => {
     expect(sanitizeAnalytics({}, "/SECRET")).toEqual({
       url: "/404",
       title: "Wind DevTools",
-    }));
+    });
+    expect(sanitizeAnalytics({}, "/en/SECRET")).toEqual({
+      url: "/en/404",
+      title: "Wind DevTools",
+    });
+  });
+
   it("includes only enumerated error categories", () =>
     expect(
       sanitizeAnalytics(

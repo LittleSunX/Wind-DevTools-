@@ -1,4 +1,7 @@
 import { tools, type ToolId } from "./catalog";
+import { i18n } from "./i18n";
+import { localizedPath, parseLocalizedPath } from "./i18n/routing";
+
 type Status = "success" | "error";
 type ErrorKind = "invalid_input" | "timeout" | "worker_error";
 type Payload = Record<string, unknown>;
@@ -27,19 +30,20 @@ const actions = [
 ];
 // Rebuild rather than redact: unrecognized fields and free-form values never leave the page.
 export function sanitizeAnalytics(payload: Payload, pathname: string): Payload {
-  const tool = tools.find(
-    (t) => pathname.replace(/\/$/, "") === `/tools/${t.id}`,
-  );
-  const url = tool
+  const route = parseLocalizedPath(pathname);
+  const tool = tools.find((t) => route.path === `/tools/${t.id}`);
+  const safePath = tool
     ? `/tools/${tool.id}`
-    : ["/", "/tools", "/tools/"].includes(pathname)
+    : route.path === "/" || route.path === "/tools"
       ? "/tools"
       : "/404";
   const clean: Payload = {};
   for (const key of ["website", "hostname", "language", "screen"])
     if (typeof payload[key] === "string") clean[key] = payload[key];
-  clean.url = url;
-  clean.title = tool ? `${tool.name} | Wind DevTools` : "Wind DevTools";
+  clean.url = localizedPath(safePath, route.language);
+  clean.title = tool
+    ? `${i18n.t(tool.name, { lng: route.language })} | Wind DevTools`
+    : "Wind DevTools";
   if (typeof payload.referrer === "string") {
     try {
       clean.referrer = new URL(payload.referrer).origin;
