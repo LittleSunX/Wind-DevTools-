@@ -1,5 +1,6 @@
 import type { Message } from "../i18n";
 import { tr, useLocale } from "../i18n/react";
+import { localizedPath } from "../i18n/routing";
 import {
   useEffect,
   useLayoutEffect,
@@ -31,7 +32,8 @@ import {
 } from "../utils/code-image";
 
 export default function CodeImage() {
-  useLocale();
+  const locale = useLocale();
+  const toolboxHref = localizedPath("/tools", locale === "en" ? "en" : "zh");
   const [code, setCode] = useState(sampleCode);
   const [language, setLanguage] = useState("typescript");
   const [options, setOptions] = useState<ImageOptions>(defaults);
@@ -349,7 +351,7 @@ export default function CodeImage() {
   return (
     <>
       <div className="breadcrumb">
-        <a href="/tools">{tr("工具箱")}</a>
+        <a href={toolboxHref}>{tr("工具箱")}</a>
         <span>/</span>
         {tr("代码画布")}
       </div>
