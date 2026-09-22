@@ -134,6 +134,15 @@ for (const [name, engine] of [
     await page.getByRole("heading", { name: /does not exist/i }).waitFor();
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
     await noChineseUI();
+    for (let index = errors.length - 1; index >= 0; index--) {
+      const error = errors[index];
+      if (
+        typeof error === "object" &&
+        error.page?.endsWith("/en/missing") &&
+        /404 \(Not Found\)/.test(error.message)
+      )
+        errors.splice(index, 1);
+    }
 
     // Worker-generated explanatory output uses the selected language too.
     for (const [tool, action, expected] of [
