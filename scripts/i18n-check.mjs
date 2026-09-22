@@ -83,6 +83,8 @@ for (const [name, engine] of [
     );
   };
   try {
+    await page.goto(base + "/");
+    await expect(page).toHaveURL(/\/en\/tools$/);
     await page.goto(base + "/en/tools");
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
     await expect(page).toHaveURL(/\/en\/tools$/);
@@ -125,6 +127,14 @@ for (const [name, engine] of [
       if (tool === "code-image") await canvasReady();
       await noChineseUI();
     }
+    const missing = await page.goto(base + "/en/missing");
+    assert.equal(missing.status(), 404);
+    await page
+      .getByRole("heading", { name: /does not exist/i })
+      .waitFor();
+    await expect(page.locator("html")).toHaveAttribute("lang", "en");
+    await noChineseUI();
+
     // Worker-generated explanatory output uses the selected language too.
     for (const [tool, action, expected] of [
       ["timestamp", "Convert", "Timestamp (seconds)"],
