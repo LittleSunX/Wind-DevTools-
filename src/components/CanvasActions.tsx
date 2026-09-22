@@ -189,8 +189,8 @@ export default function CanvasActions({
     <div className="canvas-export-actions">
       <CanvasPopover
         alignEnd
-        label={tr("复制")}
-        title={tr("复制")}
+        label="复制"
+        title="复制"
         disabled={!canExport || exporting}
       >
         <div className="canvas-action-menu">
@@ -257,8 +257,8 @@ export default function CanvasActions({
 
       <CanvasPopover
         alignEnd
-        label={tr(exporting ? "正在导出…" : "导出")}
-        title={tr("导出")}
+        label={exporting ? "正在导出…" : "导出"}
+        title="导出"
         disabled={!canExport || exporting}
       >
         <div className="canvas-export-menu">
