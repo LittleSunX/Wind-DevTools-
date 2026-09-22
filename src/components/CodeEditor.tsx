@@ -16,7 +16,6 @@ export default function CodeEditor(rawProps: EditorOptions) {
   const editor = useRef<ReturnType<typeof createEditor> | null>(null);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
-  latest.current = props;
   useEffect(() => {
     let disposed = false;
     import("./editor-runtime")
@@ -40,6 +39,7 @@ export default function CodeEditor(rawProps: EditorOptions) {
     };
   }, []);
   useEffect(() => {
+    latest.current = props;
     editor.current?.update(props);
   });
   return (

@@ -1,7 +1,7 @@
 import { tr } from "../i18n";
-import type { Options } from "./shared";
+import type { TimestampOptions } from "./shared";
 import { renderDate } from "./date";
-export function timestampTool(input: string, options: Options) {
+export function timestampTool(input: string, options: TimestampOptions) {
   const zone = options.zone || "UTC";
   let date: Date;
   if (options.direction === "date") {

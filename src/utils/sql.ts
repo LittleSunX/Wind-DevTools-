@@ -1,6 +1,6 @@
 import { format } from "sql-formatter";
-import type { Options } from "./shared";
-export function sqlTool(input: string, options: Options) {
+import type { SqlOptions } from "./shared";
+export function sqlTool(input: string, options: SqlOptions) {
   const language = options.dialect || "mysql";
   if (language !== "mysql" && language !== "postgresql" && language !== "plsql")
     throw new Error("暂不支持该 SQL 方言。");

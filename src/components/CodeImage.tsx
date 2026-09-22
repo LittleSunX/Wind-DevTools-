@@ -12,6 +12,8 @@ import CanvasSettings from "./CanvasSettings";
 import CanvasPopover from "./CanvasPopover";
 import CanvasCode from "./CanvasCode";
 import { loadCanvasFont } from "../utils/canvas-fonts";
+import { useCanvasHighlight } from "./useCanvasHighlight";
+import { canvasReadiness } from "../utils/canvas-readiness";
 import { readPreferences, writePreferences } from "../utils/canvas-preferences";
 import { readCanvasTransfer } from "../utils/canvas-transfer";
 import { sampleForLanguage } from "../utils/code-samples";
@@ -28,7 +30,6 @@ import {
   parseHighlightedLines,
   aspectRatioValue,
   type ImageOptions,
-  type Segment,
 } from "../utils/code-image";
 
 export default function CodeImage() {
@@ -38,12 +39,6 @@ export default function CodeImage() {
   const [language, setLanguage] = useState("typescript");
   const [options, setOptions] = useState<ImageOptions>(defaults);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
-  const [tokens, setTokens] = useState<{
-    code: string;
-    language: string;
-    segments: Segment[];
-  } | null>(null);
-  const [highlightError, setHighlightError] = useState("");
   const [fontError, setFontError] = useState("");
   const [fontReady, setFontReady] = useState("");
   const [notice, setNotice] = useState<Message>("");
@@ -64,8 +59,12 @@ export default function CodeImage() {
     options: defaults,
   });
   const theme = themes[options.theme] || themes.night;
-  const highlighted = tokens?.code === code && tokens.language === language;
-  const segments = highlighted ? tokens.segments : [{ text: code, type: "" }];
+  const {
+    tokens,
+    highlighted,
+    segments,
+    error: highlightError,
+  } = useCanvasHighlight(code, language);
   const lineCount = code ? code.split(/\r\n|\r|\n/).length : 1;
   const highlightedLines = parseHighlightedLines(
     options.highlightLines,
@@ -125,47 +124,6 @@ export default function CodeImage() {
     observer.observe(stage.current);
     return () => observer.disconnect();
   }, []);
-  useEffect(() => {
-    setHighlightError("");
-    let worker: Worker | undefined;
-    let timeout: ReturnType<typeof setTimeout> | undefined;
-    try {
-      validateCode(code);
-    } catch {
-      return;
-    }
-    const debounce = setTimeout(() => {
-      try {
-        worker = new Worker(
-          new URL("../code-image.worker.ts", import.meta.url),
-          { type: "module" },
-        );
-        worker.onmessage = (event) => {
-          clearTimeout(timeout);
-          worker?.terminate();
-          if (event.data.error) setHighlightError(event.data.error);
-          else setTokens({ code, language, segments: event.data.segments });
-        };
-        worker.onerror = () => {
-          clearTimeout(timeout);
-          worker?.terminate();
-          setHighlightError("语法高亮失败，请尝试纯文本模式。");
-        };
-        worker.postMessage({ code, language });
-        timeout = setTimeout(() => {
-          worker?.terminate();
-          setHighlightError("高亮超过 3 秒，请精简代码或使用纯文本模式。");
-        }, 3000);
-      } catch {
-        setHighlightError("无法启动语法高亮，请检查浏览器设置。");
-      }
-    }, 120);
-    return () => {
-      clearTimeout(debounce);
-      clearTimeout(timeout);
-      worker?.terminate();
-    };
-  }, [code, language]);
   useLayoutEffect(() => {
     const node = artwork.current;
     if (!node) return;
@@ -199,43 +157,16 @@ export default function CodeImage() {
     observer.observe(node);
     return () => observer.disconnect();
   }, [code, options, fontReady, tokens]);
-  let validation = "";
-  try {
-    validateCode(code);
-  } catch (error) {
-    validation = (error as Error).message;
-  }
-  if (
-    options.widthMode === "fixed" &&
-    (!Number.isInteger(options.width) ||
-      options.width < 320 ||
-      options.width > 2400)
-  )
-    validation = "画布宽度请输入 320–2400 之间的整数（px）。";
-  else if (!validation && size.width > 2400)
-    validation = "单行代码太长，请指定宽度并开启长行换行，或缩小字号。";
-  else if (
-    !validation &&
-    options.widthMode === "fixed" &&
-    !options.wrap &&
-    size.overflow
-  )
-    validation = "代码超出指定宽度，请开启长行自动换行或增加宽度。";
-  if (
-    !validation &&
-    (size.width * size.height * options.scale ** 2 > 16000000 ||
-      size.height * options.scale > 12000)
-  )
-    validation = "图片尺寸过大，请减少代码、字号、行高或导出倍率。";
-  const error = validation || fontError || highlightError;
-  const canExport =
-    !error &&
-    highlighted &&
-    fontReady === options.fontFamily &&
-    size.code === code &&
-    size.options === options &&
-    size.width > 0 &&
-    (options.widthMode === "fixed" || size.width === autoWidth);
+  const { error, canExport } = canvasReadiness({
+    code,
+    options,
+    size,
+    autoWidth,
+    highlighted,
+    fontReady,
+    fontError,
+    highlightError,
+  });
   const displayScale =
     zoom === "fit"
       ? Math.min(1, Math.max(0.1, (available - 48) / (size.width || 1)))

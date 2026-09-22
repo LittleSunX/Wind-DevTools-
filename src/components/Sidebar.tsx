@@ -13,16 +13,23 @@ export function useSidebar() {
   const dialog = useRef<HTMLDialogElement>(null);
   const mobileToggle = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    try {
-      setCollapsed(localStorage.getItem(preferenceKey) === "true");
-      setPinned(localStorage.getItem("wind.sidebar.pinned") === "true");
-    } catch {
-      /* Navigation remains available when storage is blocked. */
-    }
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      try {
+        setCollapsed(localStorage.getItem(preferenceKey) === "true");
+        setPinned(localStorage.getItem("wind.sidebar.pinned") === "true");
+      } catch {
+        /* Navigation remains available when storage is blocked. */
+      }
+    });
     const media = window.matchMedia("(max-width: 800px)");
     const closeOnResize = () => dialog.current?.close();
     media.addEventListener("change", closeOnResize);
-    return () => media.removeEventListener("change", closeOnResize);
+    return () => {
+      cancelled = true;
+      media.removeEventListener("change", closeOnResize);
+    };
   }, []);
   useEffect(() => {
     if (!mobileOpen) return;

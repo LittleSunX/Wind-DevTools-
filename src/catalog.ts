@@ -79,7 +79,7 @@ export const tools = [
     icon: "<>",
     description: "根据 JSON 结构生成 TypeScript 接口或 Java 类型。",
     tags: ["TypeScript", "Java"],
-    hint: "根据当前样例推断字段类型；复杂数组会按样例中的首个 Java 元素推断。",
+    hint: "根据当前样例推断字段类型；对象数组会合并字段，Java 混合类型会使用 Object。",
     example:
       '{"id":1001,"name":"Wind","active":true,"profile":{"city":"Shanghai"},"tags":["dev","tools"]}',
   },
@@ -114,3 +114,4 @@ export const categories = [
   "编码转换",
   "创作与分享",
 ];
+export type ToolDefinition = (typeof tools)[number];

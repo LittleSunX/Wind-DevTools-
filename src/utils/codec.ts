@@ -1,4 +1,4 @@
-import type { Options } from "./shared";
+import type { CodecOptions } from "./shared";
 
 function encodeBase64Utf8(input: string) {
   const bytes = new TextEncoder().encode(input);
@@ -21,7 +21,7 @@ function decodeBase64Utf8(input: string) {
   }
 }
 
-export function codecTool(input: string, options: Options) {
+export function codecTool(input: string, options: CodecOptions) {
   const codec = options.codec === "url" ? "url" : "base64";
   const direction = options.codecDirection === "decode" ? "decode" : "encode";
   if (codec === "url") {

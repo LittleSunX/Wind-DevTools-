@@ -87,7 +87,7 @@ describe("JWT unverified decoding", () => {
     expect(jwtTool(jwt({ exp: "123", iat: null }))).toContain("时间字段无效"));
 });
 describe("SQL semantics", () => {
-  it.each(["mysql", "postgresql", "plsql"])(
+  it.each(["mysql", "postgresql", "plsql"] as const)(
     "formats %s without changing string literals",
     (dialect) => {
       expect(

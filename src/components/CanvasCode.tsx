@@ -51,9 +51,9 @@ export default function CanvasCode({
     input.current.focus();
     input.current.setSelectionRange(index, index + query.length);
     const row = code.slice(0, index).split("\n").length - 1;
-    input.current.parentElement
-      ?.querySelectorAll(".canvas-source-row")
-      [row]?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    const rows =
+      input.current.parentElement?.querySelectorAll(".canvas-source-row");
+    rows?.[row]?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }
   return (
     <div

@@ -1,6 +1,6 @@
 import { MessageError, tr } from "../i18n";
-import type { Options } from "./shared";
-export function jsonTool(input: string, options: Options) {
+import type { JsonOptions } from "./shared";
+export function jsonTool(input: string, options: JsonOptions) {
   // Validate syntax, but never serialize the parsed numbers: retain original tokens.
   try {
     JSON.parse(input);
@@ -24,7 +24,7 @@ export function jsonTool(input: string, options: Options) {
       values: { detail: message },
     });
   }
-  const tokens = input.match(/"(?:\\.|[^"\\])*"|[^\s{}\[\],:]+|[{}\[\],:]/g)!;
+  const tokens = input.match(/"(?:\\.|[^"\\])*"|[^\s{}[\],:]+|[{}[\],:]/g)!;
   const stack: (Set<string> | null)[] = [];
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i];

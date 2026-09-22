@@ -9,13 +9,14 @@
     "preview": "node scripts/preview.mjs",
     "test": "vitest run",
     "test:browser": "node scripts/browser-check.mjs",
-    "format": "prettier --write src scripts tests *.json *.ts index.html",
-    "format:check": "prettier --check src scripts tests *.json *.ts index.html",
+    "format": "prettier --write src scripts tests *.json *.ts *.js index.html",
+    "format:check": "prettier --check src scripts tests *.json *.ts *.js index.html",
     "test:build": "node scripts/build-check.mjs",
     "test:code-image": "node scripts/code-image-check.mjs",
     "test:compat": "node scripts/compat-check.mjs",
     "test:sidebar": "node scripts/sidebar-check.mjs",
-    "test:i18n": "node scripts/i18n-check.mjs"
+    "test:i18n": "node scripts/i18n-check.mjs",
+    "lint": "eslint src"
   },
   "dependencies": {
     "@codemirror/commands": "^6.11.1",
@@ -36,16 +37,20 @@
     "sql-formatter": "^15.0.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.50.0",
     "@types/node": "^22.0.0",
     "@types/prismjs": "^1.26.6",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.0.0",
+    "eslint": "^10.11.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "prettier": "^3.9.7",
     "tsx": "^4.0.0",
     "typescript": "~5.7.0",
+    "typescript-eslint": "^8.70.1",
     "vite": "^6.0.0",
-    "vitest": "^3.0.0"
+    "vitest": "^5.0.1"
   }
 }

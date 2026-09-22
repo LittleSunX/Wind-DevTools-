@@ -1,16 +1,13 @@
 import { i18n, resolveLanguage, errorMessage } from "./i18n";
-import { checkInput, type Options } from "./utils/shared";
-self.onmessage = async (
-  event: MessageEvent<{
-    id: string;
-    input: string;
-    options: Options;
-    language?: string;
-  }>,
-) => {
+import {
+  checkInput,
+  type ToolRequest,
+  type ToolResponse,
+} from "./utils/shared";
+self.onmessage = async (event: MessageEvent<ToolRequest>) => {
   const { id, input, options } = event.data;
-  await i18n.changeLanguage(resolveLanguage(event.data.language ?? null, []));
   try {
+    await i18n.changeLanguage(resolveLanguage(event.data.language ?? null, []));
     checkInput(input);
     let result: string;
     switch (id) {
@@ -47,10 +44,11 @@ self.onmessage = async (
       default:
         throw new Error("未知工具。");
     }
-    self.postMessage({ result });
+    self.postMessage({ status: "success", result } satisfies ToolResponse);
   } catch (error) {
     self.postMessage({
+      status: "error",
       error: errorMessage(error),
-    });
+    } satisfies ToolResponse);
   }
 };

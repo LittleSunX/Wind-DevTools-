@@ -1,6 +1,6 @@
-import type { Options } from "./shared";
+import type { TextOptions } from "./shared";
 
-export function textTool(input: string, options: Options) {
+export function textTool(input: string, options: TextOptions) {
   const action = options.textAction || "dedupe";
   const lines = input.replace(/\r\n?/g, "\n").split("\n");
   switch (action) {

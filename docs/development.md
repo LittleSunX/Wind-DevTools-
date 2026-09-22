@@ -8,8 +8,8 @@
 | 开发与构建 | Vite、静态 HTML 预渲染                     |
 | 工具处理   | Web Worker、sql-formatter、cron-parser     |
 | 代码画布   | Prism 语法高亮、DOM 编辑与 PNG / SVG 导出 |
-| 国际化 | i18next、react-i18next、中英文 JSON 资源 |
-| 验证       | Vitest、Playwright（Chromium / Firefox / WebKit）、Prettier |
+| 国际化     | i18next、react-i18next、中英文 JSON 资源          |
+| 验证       | Vitest、Playwright、ESLint、React Hooks、Prettier |
 
 ### 常用命令
 
@@ -24,11 +24,13 @@
 | `npm run test:code-image` | PNG 内容与尺寸、透明度、剪贴板和代码图片交互验收 |
 | `npm run format`          | 格式化源码与配置                                 |
 | `npm run format:check`    | 检查代码格式                                     |
+| `npm run lint`            | 检查 TypeScript 与 React Hooks 规则               |
 
-单元测试可直接运行。构建检查需先执行 `npm run build`；浏览器验收还需要安装 Chrome，并保持 `npm run preview` 在另一个终端运行：
+单元测试可直接运行。JSON 转类型的有效性测试会调用 `javac` 编译生成的 Java 源码；CI 安装 JDK 21，本机可将 `javac` 加入 PATH、设置 `JAVA_HOME`，或通过 `WIND_TEST_JAVAC` 指定编译器路径。未找到编译器时本机跳过两项 Java 编译测试，CI 则要求它们通过。构建检查需先执行 `npm run build`；浏览器验收还需要安装 Chrome，并保持 `npm run preview` 在另一个终端运行：
 
 ```sh
 npm test
+npm run lint
 npm run test:build
 npm run test:browser
 npm run test:code-image
@@ -47,10 +49,17 @@ npm run test:code-image -- http://localhost:4173
 
 ```text
 src/
-├── App.tsx                 工具首页、导航与文本工具交互
+├── App.tsx                 路由选择与页面元信息
 ├── catalog.ts              工具名称、分类、描述和示例
-├── components/CodeImage.tsx 代码图片编辑与预览
+├── components/AppLayout.tsx      顶栏、侧栏和页面外壳
+├── components/ToolDirectory.tsx  工具目录与搜索
+├── components/TextToolPage.tsx   文本工具页面与选项
+├── components/useToolExecution.ts 处理线程、取消和超时
+├── components/CodeImage.tsx      代码画布交互
+├── components/useCanvasHighlight.ts 语法高亮线程
 ├── utils/                  独立工具逻辑、语法高亮与图片渲染
+├── utils/shared.ts         各工具选项与 Worker 请求/响应类型
+├── utils/canvas-readiness.ts 导出就绪判断
 ├── worker.ts               文本工具后台处理入口
 ├── code-image.worker.ts    代码高亮后台处理入口
 └── analytics.ts            可选统计与载荷白名单
@@ -64,11 +73,13 @@ tests/                      单元与回归测试
 docs/images/                项目展示图片
 ```
 
-新增工具时，将处理逻辑放入 `src/utils/`，再接入工具清单、页面和 Worker，并补充相应测试。处理模块保持本地运行，统计仅记录允许的事件字段。
+新增工具时，将处理逻辑放入 `src/utils/`，在 `shared.ts` 定义工具选项和请求类型，再接入 `catalog.ts`、`TextToolPage.tsx`、`worker.ts` 与同步入口 `logic.ts`。补充针对边界输入的测试。处理模块保持本地运行，统计仅记录允许的事件字段。
+
+JSON 转类型的回归测试会把生成的 TypeScript 交给 TypeScript 编译器、把 Java 类交给 `javac` 编译；对象数组必须合并所有样例字段，并把缺失字段标为可选。修改推断逻辑时运行 `npm test`，不能只比较输出文本。
 
 ### 自动化与浏览器覆盖
 
-GitHub Actions 在 push 和 pull request 时执行格式检查、单元测试、构建检查、Chrome 系列浏览器回归和跨浏览器验收。失败时上传测试截图、PNG 等产物。
+GitHub Actions 在 push 和 pull request 时执行格式、ESLint、单元测试、构建检查和浏览器回归。浏览器覆盖 Chromium、Firefox 与 WebKit，失败时上传测试截图、PNG 等产物。
 
 本机运行跨浏览器验收：
 

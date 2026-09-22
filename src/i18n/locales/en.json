@@ -323,7 +323,7 @@
   "Base64 按 UTF-8 文本处理；URL 使用标准 percent-encoding。": "Base64 uses UTF-8 text; URL encoding uses standard percent-encoding.",
   "JSON 转类型": "JSON to Types",
   "根据 JSON 结构生成 TypeScript 接口或 Java 类型。": "Generate TypeScript interfaces or Java classes from JSON.",
-  "根据当前样例推断字段类型；复杂数组会按样例中的首个 Java 元素推断。": "Types are inferred from the sample. Java array types are inferred from the first element.",
+  "根据当前样例推断字段类型；对象数组会合并字段，Java 混合类型会使用 Object。": "Types are inferred from the sample. Object arrays merge fields; mixed Java types use Object.",
   "批量文本处理": "Text Processing",
   "去重、排序、去空行、Trim、大小写与批量前后缀。": "Remove duplicates, sort, trim, change case, and add prefixes or suffixes.",
   "去重": "Deduplicate",

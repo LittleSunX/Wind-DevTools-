@@ -1,6 +1,6 @@
 import { MessageError, tr } from "../i18n";
 import { CronExpressionParser } from "cron-parser";
-import type { Options } from "./shared";
+import type { CronOptions } from "./shared";
 import { renderDate } from "./date";
 export function normalizeCron(input: string, mode: string) {
   const fields = input.trim().split(/\s+/);
@@ -10,7 +10,7 @@ export function normalizeCron(input: string, mode: string) {
         ? "Linux 需要 5 个字段。"
         : "Quartz 需要 6 个字段，暂不支持年份。",
     );
-  if (fields.some((f) => !/^[0-9*?,/\-]+$/.test(f)))
+  if (fields.some((f) => !/^[0-9*?,/-]+$/.test(f)))
     throw new Error(
       "仅支持数字、*、?、范围、列表和步长；不支持名称、L、W、#。",
     );
@@ -56,7 +56,11 @@ export function normalizeCron(input: string, mode: string) {
     mapped === "?" ? "*" : mapped,
   ].join(" ");
 }
-export function cronTool(input: string, options: Options, now = new Date()) {
+export function cronTool(
+  input: string,
+  options: CronOptions,
+  now = new Date(),
+) {
   const mode = options.mode || "quartz";
   const expression = normalizeCron(input, mode);
   const zone =
