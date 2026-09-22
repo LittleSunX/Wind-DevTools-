@@ -15,32 +15,37 @@ function readSavedLanguage() {
 
 async function bootstrap() {
   const requested = parseLocalizedPath(window.location.pathname);
+  let language = requested.language;
   if (window.location.pathname === "/") {
-    const preferred = resolveLanguage(readSavedLanguage(), navigator.languages);
-    if (preferred === "en") {
+    language = resolveLanguage(readSavedLanguage(), navigator.languages);
+    if (language === "en") {
       window.location.replace(
         `/en/tools${window.location.search}${window.location.hash}`,
       );
       return;
     }
-    await i18n.changeLanguage("zh");
-  } else {
-    await i18n.changeLanguage(requested.language);
   }
-  mount();
+  await i18n.changeLanguage(language);
+  const htmlLanguage = language === "zh" ? "zh-CN" : "en";
+  const canHydrate = document.documentElement.lang === htmlLanguage;
+  document.documentElement.lang = htmlLanguage;
+  mount(canHydrate);
 }
 
 void bootstrap();
 
-function mount() {
+function mount(canHydrate: boolean) {
   const root = document.getElementById("root")!;
   const app = (
     <React.StrictMode>
       <App path={window.location.pathname} />
     </React.StrictMode>
   );
-  if (root.querySelector(".app")) hydrateRoot(root, app);
-  else createRoot(root).render(app);
+  if (root.querySelector(".app") && canHydrate) hydrateRoot(root, app);
+  else {
+    root.replaceChildren();
+    createRoot(root).render(app);
+  }
 
   void import("./analytics").then(({ initAnalytics }) => initAnalytics());
 }
