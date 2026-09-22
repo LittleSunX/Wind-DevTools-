@@ -1,4 +1,5 @@
-import { i18n, type Message } from "./i18n";
+import { i18n, type Language, type Message } from "./i18n";
+import { localizedPath, parseLocalizedPath } from "./i18n/routing";
 import { tr, useLocale } from "./i18n/react";
 import LanguageSwitcher from "./components/LanguageSwitcher";
 import Sidebar, { SidebarIcon, useSidebar } from "./components/Sidebar";
@@ -66,7 +67,10 @@ function Icon({ children }: { children: ReactNode }) {
 }
 export function App({ path = "/tools" }: { path?: string }) {
   const locale = useLocale();
-  const normalized = path.replace(/\/$/, "") || "/";
+  const route = parseLocalizedPath(path);
+  const normalized = route.path.replace(/\/$/, "") || "/";
+  const language = (locale === "en" ? "en" : "zh") as Language;
+  const href = (target: string) => localizedPath(target, language);
   const current = tools.find((t) => normalized === `/tools/${t.id}`);
   const isHome = normalized === "/" || normalized === "/tools";
   const sidebar = useSidebar();
@@ -251,7 +255,7 @@ export function App({ path = "/tools" }: { path?: string }) {
     try {
       writeCanvasTransfer(sessionStorage, payload);
       trackTool(current.id, "send_to_canvas", "success");
-      window.location.assign("/tools/code-image");
+      window.location.assign(href("/tools/code-image"));
     } catch {
       trackTool(current.id, "send_to_canvas", "error");
       setNotice("无法暂存结果，请检查浏览器存储设置后重试。");
@@ -292,7 +296,7 @@ export function App({ path = "/tools" }: { path?: string }) {
         >
           <SidebarIcon />
         </button>
-        <a className="brand" href="/tools">
+        <a className="brand" href={href("/tools")}>
           <span className="brand-name">
             wind<span className="brand-period">.</span>
           </span>
@@ -300,10 +304,10 @@ export function App({ path = "/tools" }: { path?: string }) {
           <span className="brand-product">DevTools</span>
         </a>
         <nav aria-label={tr("主导航")}>
-          <a href="/tools" className="nav-active">
+          <a href={href("/tools")} className="nav-active">
             {tr("工具箱")}
           </a>
-          <a href="/tools#about">{tr("关于")}</a>
+          <a href={`${href("/tools")}#about`}>{tr("关于")}</a>
         </nav>
         <span className="header-local">
           <i /> {tr("数据留在浏览器")}
@@ -482,7 +486,7 @@ export function App({ path = "/tools" }: { path?: string }) {
                   {visible.map((t, i) => (
                     <a
                       className={`tool-card card-${t.id}`}
-                      href={`/tools/${t.id}`}
+                      href={href(`/tools/${t.id}`)}
                       key={t.id}
                     >
                       <div className="card-top">
@@ -527,7 +531,7 @@ export function App({ path = "/tools" }: { path?: string }) {
           ) : current ? (
             <>
               <div className="breadcrumb">
-                <a href="/tools">{tr("工具箱")}</a>
+                <a href={href("/tools")}>{tr("工具箱")}</a>
                 <span>/</span>
                 {tr(current.name)}
               </div>
@@ -570,7 +574,7 @@ export function App({ path = "/tools" }: { path?: string }) {
               <div className="options-bar">
                 {(current.id === "json" || current.id === "sql") && (
                   <Select
-                    label={tr("缩进")}
+                    label="缩进"
                     value={options.indent!}
                     items={[
                       ["2", "2 个空格"],
@@ -582,7 +586,7 @@ export function App({ path = "/tools" }: { path?: string }) {
                 {current.id === "sql" && (
                   <>
                     <Select
-                      label={tr("SQL 方言")}
+                      label="SQL 方言"
                       value={options.dialect!}
                       items={[
                         ["mysql", "MySQL"],
@@ -592,7 +596,7 @@ export function App({ path = "/tools" }: { path?: string }) {
                       onChange={(v) => option("dialect", v)}
                     />
                     <Select
-                      label={tr("关键字")}
+                      label="关键字"
                       value={options.keyword!}
                       items={[
                         ["upper", "大写"],
@@ -605,7 +609,7 @@ export function App({ path = "/tools" }: { path?: string }) {
                 {current.id === "timestamp" && (
                   <>
                     <Select
-                      label={tr("转换方向")}
+                      label="转换方向"
                       value={options.direction!}
                       items={[
                         ["timestamp", "时间戳 → 日期"],
@@ -614,7 +618,7 @@ export function App({ path = "/tools" }: { path?: string }) {
                       onChange={(v) => option("direction", v)}
                     />
                     <Select
-                      label={tr("输入单位")}
+                      label="输入单位"
                       value={options.unit!}
                       items={[
                         ["ms", "毫秒（ms）"],
@@ -626,7 +630,7 @@ export function App({ path = "/tools" }: { path?: string }) {
                 )}
                 {current.id === "cron" && (
                   <Select
-                    label={tr("表达式模式")}
+                    label="表达式模式"
                     value={options.mode!}
                     items={[
                       ["quartz", "Quartz · 6 字段"],
@@ -638,7 +642,7 @@ export function App({ path = "/tools" }: { path?: string }) {
                 {current.id === "codec" && (
                   <>
                     <Select
-                      label={tr("编码类型")}
+                      label="编码类型"
                       value={options.codec!}
                       items={[
                         ["base64", "Base64"],
@@ -647,7 +651,7 @@ export function App({ path = "/tools" }: { path?: string }) {
                       onChange={(v) => option("codec", v)}
                     />
                     <Select
-                      label={tr("操作")}
+                      label="操作"
                       value={options.codecDirection!}
                       items={[
                         ["encode", "编码"],
@@ -660,7 +664,7 @@ export function App({ path = "/tools" }: { path?: string }) {
                 {current.id === "json-type" && (
                   <>
                     <Select
-                      label={tr("目标语言")}
+                      label="目标语言"
                       value={options.target!}
                       items={[
                         ["typescript", "TypeScript"],
@@ -684,7 +688,7 @@ export function App({ path = "/tools" }: { path?: string }) {
                 {current.id === "text" && (
                   <>
                     <Select
-                      label={tr("处理方式")}
+                      label="处理方式"
                       value={options.textAction!}
                       items={[
                         ["dedupe", "按行去重"],
@@ -727,7 +731,7 @@ export function App({ path = "/tools" }: { path?: string }) {
                 )}
                 {(current.id === "timestamp" || current.id === "cron") && (
                   <Select
-                    label={tr("时区")}
+                    label="时区"
                     value={options.zone!}
                     items={[
                       ["UTC", "UTC"],
@@ -834,15 +838,15 @@ export function App({ path = "/tools" }: { path?: string }) {
                       spellCheck={false}
                       value={input}
                       onChange={(e) => changeInput(e.target.value)}
-                      placeholder={tr(
+                      placeholder={
                         current.id === "timestamp" &&
-                          options.direction === "date"
+                        options.direction === "date"
                           ? "2026-09-14 00:00:00"
                           : tr(
                               "在这里粘贴{{name}}内容…\n\n也可以点击「加载示例」开始。",
                               { name: tr(current.name) },
-                            ),
-                      )}
+                            )
+                      }
                     />
                   )}
                   {error && (
@@ -1022,7 +1026,7 @@ export function App({ path = "/tools" }: { path?: string }) {
               <span className="eyebrow">404 / NOT FOUND</span>
               <h1>{tr("这个工具还不存在。")}</h1>
               <p>{tr("回到工具箱，寻找你需要的工具。")}</p>
-              <a className="primary" href="/tools">
+              <a className="primary" href={href("/tools")}>
                 {tr("返回工具箱 ↗")}
               </a>
             </section>
