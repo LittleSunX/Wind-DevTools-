@@ -224,7 +224,7 @@ for (const [name, engine] of [
       ]) {
         await page.goto(base + route);
         await expect(page.locator("html")).toHaveAttribute("lang", "en");
-        if (route === "/tools/code-image") await canvasReady();
+        if (route === "/en/tools/code-image") await canvasReady();
         assert.ok(
           await page.evaluate(
             () => document.documentElement.scrollWidth <= innerWidth + 1,
