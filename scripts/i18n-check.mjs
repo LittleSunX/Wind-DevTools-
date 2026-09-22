@@ -138,7 +138,8 @@ for (const [name, engine] of [
       const error = errors[index];
       if (
         typeof error === "object" &&
-        error.page?.endsWith("/en/missing") &&
+        (error.page?.endsWith("/en/missing") ||
+          error.location?.url?.endsWith("/en/missing")) &&
         /404/.test(error.message)
       )
         errors.splice(index, 1);
