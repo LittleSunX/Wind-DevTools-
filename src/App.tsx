@@ -9,6 +9,7 @@ import DiffTool from "./components/DiffTool";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { categories, tools } from "./catalog";
 import { trackTool } from "./analytics";
+import { pageMetadata } from "./seo";
 import type { Options } from "./utils/shared";
 import {
   createCanvasTransfer,
@@ -75,13 +76,11 @@ export function App({ path = "/tools" }: { path?: string }) {
   const isHome = normalized === "/" || normalized === "/tools";
   const sidebar = useSidebar();
   useEffect(() => {
-    document.title = `${tr(current?.name ?? (isHome ? "开发者工具箱" : "页面不存在"))} | Wind DevTools`;
+    const meta = pageMetadata({ language, tool: current, isHome });
+    document.title = meta.title;
     const description = document.querySelector('meta[name="description"]');
-    description?.setAttribute(
-      "content",
-      tr(current?.description ?? "小工具，解决开发中的日常问题。"),
-    );
-  }, [locale, current, isHome]);
+    description?.setAttribute("content", meta.description);
+  }, [language, current, isHome]);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("全部工具");
   const [input, setInput] = useState("");
