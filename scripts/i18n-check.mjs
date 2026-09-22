@@ -139,7 +139,7 @@ for (const [name, engine] of [
       if (
         typeof error === "object" &&
         error.page?.endsWith("/en/missing") &&
-        /404 \(Not Found\)/.test(error.message)
+        /404/.test(error.message)
       )
         errors.splice(index, 1);
     }
