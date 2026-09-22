@@ -23,10 +23,21 @@ jobs:
       - name: Browser regression
         run: |
           npm run preview > /tmp/wind-preview.log 2>&1 &
+          preview_pid=$!
+          trap 'kill "$preview_pid" 2>/dev/null || true' EXIT
+          preview_ready=0
           for attempt in $(seq 1 30); do
-            if curl -fsS http://localhost:4173/tools > /dev/null; then break; fi
+            if curl --fail --silent http://localhost:4173/tools > /dev/null; then
+              preview_ready=1
+              break
+            fi
             sleep 1
           done
+          if [ "$preview_ready" -ne 1 ]; then
+            cat /tmp/wind-preview.log
+            echo "Preview server did not become ready within 30 seconds."
+            exit 1
+          fi
           npm run test:browser
           npm run test:code-image
           npm run test:compat
@@ -34,6 +45,7 @@ jobs:
           npm run test:i18n
         env:
           PW_CHANNEL: bundled
+          I18N_WORKER_DELAY_MS: 250
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

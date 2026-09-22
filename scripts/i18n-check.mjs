@@ -1,6 +1,6 @@
 import { chromium, firefox, webkit, expect } from "@playwright/test";
 import assert from "node:assert/strict";
-import { mkdir } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 const base = process.env.TEST_URL || "http://localhost:4173";
 await mkdir("artifacts", { recursive: true });
 for (const [name, engine] of [
@@ -15,11 +15,40 @@ for (const [name, engine] of [
   });
   const page = await context.newPage();
   page.setDefaultTimeout(15000);
+  // Exercise slower worker startup without relying on arbitrary page sleeps.
+  const workerDelay = Number(process.env.I18N_WORKER_DELAY_MS || 0);
+  if (workerDelay > 0) {
+    await page.route("**/assets/code-image.worker-*.js", async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, workerDelay));
+      await route.continue();
+    });
+  }
   const errors = [];
+  const failedRequests = [];
+  page.on("requestfailed", (request) =>
+    failedRequests.push({
+      url: request.url(),
+      page: page.url(),
+      failure: request.failure(),
+    }),
+  );
   page.on("pageerror", (e) => errors.push(e.message));
   page.on("console", (m) => {
-    if (m.type() === "error") errors.push(m.text());
+    if (m.type() === "error")
+      errors.push({
+        message: m.text(),
+        page: page.url(),
+        location: m.location(),
+      });
   });
+  const canvasReady = async () => {
+    // Language hydration can finish before fonts, measurement and worker highlighting.
+    // Do not navigate away or replace code while the initial worker is still loading.
+    await expect(
+      page.getByRole("button", { name: "Export", exact: true }),
+    ).toBeEnabled({ timeout: 15000 });
+    await expect(page.getByRole("alert")).toHaveCount(0);
+  };
   const switchTo = async (language) => {
     await page.locator(".language-switcher").selectOption(language);
     await expect(page.locator("html")).toHaveAttribute(
@@ -85,6 +114,7 @@ for (const [name, engine] of [
     ]) {
       await page.goto(`${base}/tools/${tool}`);
       await expect(page.locator("html")).toHaveAttribute("lang", "en");
+      if (tool === "code-image") await canvasReady();
       await noChineseUI();
     }
     // Worker-generated explanatory output uses the selected language too.
@@ -103,6 +133,7 @@ for (const [name, engine] of [
       );
     }
     await page.goto(base + "/tools/code-image");
+    await canvasReady();
     const code = page.getByLabel("Code", { exact: true });
     await code.fill('const greeting = "中文 {{name}}";');
     await page.getByLabel("Window title", { exact: true }).fill("保留标题.ts");
@@ -149,6 +180,7 @@ for (const [name, engine] of [
     );
     await page.goto(base + "/tools/json");
     await expect(page.locator(".cm-content").first()).toBeVisible();
+    await expect(page.locator(".code-editor textarea")).toHaveCount(0);
     await page
       .getByRole("textbox", { name: "输入", exact: true })
       .fill('{"代码":1,"代码":2}');
@@ -173,11 +205,13 @@ for (const [name, engine] of [
       /"中文": 1/,
     );
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
+    await canvasReady();
     for (const width of [375, 800]) {
       await page.setViewportSize({ width, height: 900 });
       for (const route of ["/tools", "/tools/json", "/tools/code-image"]) {
         await page.goto(base + route);
         await expect(page.locator("html")).toHaveAttribute("lang", "en");
+        if (route === "/tools/code-image") await canvasReady();
         assert.ok(
           await page.evaluate(
             () => document.documentElement.scrollWidth <= innerWidth + 1,
@@ -209,6 +243,10 @@ for (const [name, engine] of [
       `${name}: bilingual UI, persistence, state preservation, errors, transfer, mobile and blocked storage passed.`,
     );
   } catch (error) {
+    await writeFile(
+      `artifacts/i18n-${name}-errors.json`,
+      JSON.stringify({ errors, failedRequests }, null, 2),
+    );
     await page.screenshot({
       path: `artifacts/i18n-${name}-failure.png`,
       fullPage: true,
