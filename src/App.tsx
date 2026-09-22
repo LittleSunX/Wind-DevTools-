@@ -818,7 +818,7 @@ export function App({ path = "/tools" }: { path?: string }) {
                   {codeLanguage ? (
                     <CodeEditor
                       id="tool-input"
-                      label={tr("输入")}
+                      label="输入"
                       value={input}
                       language={codeLanguage}
                       dialect={options.dialect}
@@ -826,7 +826,7 @@ export function App({ path = "/tools" }: { path?: string }) {
                       wrap={wrap}
                       invalid={!!error}
                       onChange={changeInput}
-                      placeholder={tr("粘贴代码，或点击「加载示例」开始…")}
+                      placeholder="粘贴代码，或点击「加载示例」开始…"
                     />
                   ) : (
                     <textarea
@@ -921,7 +921,7 @@ export function App({ path = "/tools" }: { path?: string }) {
                     {codeLanguage ? (
                       <CodeEditor
                         id="tool-output"
-                        label={tr("处理结果")}
+                        label="处理结果"
                         value={output}
                         language={codeLanguage}
                         dialect={options.dialect}
