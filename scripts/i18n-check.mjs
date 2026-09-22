@@ -225,6 +225,7 @@ for (const [name, engine] of [
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
     await expect(page).toHaveURL(/\/en\/tools\/code-image$/);
     await canvasReady();
+    await noChineseUI();
     for (const width of [375, 800]) {
       await page.setViewportSize({ width, height: 900 });
       for (const route of [
