@@ -368,10 +368,13 @@ export default function CodeImage() {
         aria-label={tr("画布工具栏")}
       >
         <CanvasPopover
-          label={tr("语言 · {{name}}", {
-            name: tr(languages.find(([id]) => id === language)?.[1]),
-          })}
-          title={tr("选择语言")}
+          label={{
+            key: "语言 · {{name}}",
+            values: {
+              name: tr(languages.find(([id]) => id === language)?.[1]),
+            },
+          }}
+          title="选择语言"
           disabled={exporting}
         >
           <div className="shot-language-search">
@@ -464,8 +467,8 @@ export default function CodeImage() {
         )}
         <CanvasPopover
           alignEnd
-          label={tr("外观设置")}
-          title={tr("外观设置")}
+          label="外观设置"
+          title="外观设置"
           disabled={exporting}
         >
           <CanvasSettings
