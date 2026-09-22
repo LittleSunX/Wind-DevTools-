@@ -10,8 +10,9 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+
 const root = process.cwd();
-for (const tool of [
+const toolIds = [
   "json",
   "timestamp",
   "jwt",
@@ -22,13 +23,29 @@ for (const tool of [
   "codec",
   "json-type",
   "text",
-]) {
-  const html = await readFile(`dist/tools/${tool}/index.html`, "utf8");
-  assert.ok(html.includes("<h1>"));
-  assert.ok(html.includes("使用说明"));
-  assert.ok(!html.includes("<!--app-html-->"));
-  assert.ok(html.includes('name="description"'));
+];
+
+for (const tool of toolIds) {
+  for (const [prefix, lang] of [
+    ["", "zh-CN"],
+    ["/en", "en"],
+  ]) {
+    const html = await readFile(
+      `dist${prefix}/tools/${tool}/index.html`,
+      "utf8",
+    );
+    assert.ok(html.includes("<h1>"));
+    assert.ok(!html.includes("<!--app-html-->"));
+    assert.ok(html.includes('name="description"'));
+    assert.ok(html.includes(`<html lang="${lang}">`));
+    if (lang === "en")
+      assert.ok(
+        !/<title>[^<]*[\p{Script=Han}][^<]*<\/title>/u.test(html),
+        `English title contains Chinese: ${tool}`,
+      );
+  }
 }
+
 const fixture = await mkdtemp(path.join(tmpdir(), "wind-seo-"));
 try {
   await mkdir(path.join(fixture, "dist"));
@@ -51,28 +68,85 @@ try {
     },
   );
   assert.equal(result.status, 0, result.stdout + result.stderr);
-  const html = await readFile(
+
+  const zh = await readFile(
     path.join(fixture, "dist/tools/json/index.html"),
     "utf8",
   );
+  const en = await readFile(
+    path.join(fixture, "dist/en/tools/json/index.html"),
+    "utf8",
+  );
   assert.ok(
-    html.includes(
+    zh.includes(
       'rel="canonical" href="https://wind-devtools.test/tools/json"',
     ),
   );
+  assert.ok(
+    en.includes(
+      'rel="canonical" href="https://wind-devtools.test/en/tools/json"',
+    ),
+  );
+  for (const html of [zh, en]) {
+    assert.ok(
+      html.includes(
+        'hreflang="zh-CN" href="https://wind-devtools.test/tools/json"',
+      ),
+    );
+    assert.ok(
+      html.includes(
+        'hreflang="en" href="https://wind-devtools.test/en/tools/json"',
+      ),
+    );
+    assert.ok(
+      html.includes(
+        'hreflang="x-default" href="https://wind-devtools.test/tools/json"',
+      ),
+    );
+  }
+  assert.ok(en.includes("<title>JSON Formatter - Free Online Developer Tool"));
+  assert.ok(en.includes('<html lang="en">'));
+
+  const rootAlias = await readFile(
+    path.join(fixture, "dist/index.html"),
+    "utf8",
+  );
+  const enAlias = await readFile(
+    path.join(fixture, "dist/en/index.html"),
+    "utf8",
+  );
+  assert.ok(
+    rootAlias.includes(
+      'rel="canonical" href="https://wind-devtools.test/tools"',
+    ),
+  );
+  assert.ok(
+    enAlias.includes(
+      'rel="canonical" href="https://wind-devtools.test/en/tools"',
+    ),
+  );
+
   const sitemap = await readFile(
     path.join(fixture, "dist/sitemap.xml"),
     "utf8",
   );
-  assert.equal((sitemap.match(/<url>/g) || []).length, 11);
+  assert.equal((sitemap.match(/<url>/g) || []).length, 22);
+  assert.ok(sitemap.includes("xmlns:xhtml="));
+  assert.ok(
+    sitemap.includes(
+      "<loc>https://wind-devtools.test/en/tools/json</loc>",
+    ),
+  );
   assert.ok(
     (await readFile(path.join(fixture, "dist/robots.txt"), "utf8")).includes(
       "Sitemap: https://wind-devtools.test/sitemap.xml",
     ),
   );
+
   const page404 = await readFile(path.join(fixture, "dist/404.html"), "utf8");
   assert.ok(page404.includes('name="robots" content="noindex"'));
   assert.ok(!page404.includes('rel="canonical"'));
+
   // Rebuild as a preview to ensure previous production SEO files cannot remain.
   await rm(path.join(fixture, "dist"), { recursive: true });
   await mkdir(path.join(fixture, "dist"));
@@ -97,8 +171,9 @@ try {
     ),
   );
   await assert.rejects(access(path.join(fixture, "dist/sitemap.xml")));
+
   console.log(
-    "Build checks passed: static content, production canonical/sitemap, preview robots and 404 metadata.",
+    "Build checks passed: bilingual static pages, canonical/hreflang, sitemap, preview robots and 404 metadata.",
   );
 } finally {
   await rm(fixture, { recursive: true, force: true });
