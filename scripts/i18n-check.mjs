@@ -66,7 +66,7 @@ for (const [name, engine] of [
         if (
           !parent ||
           parent.closest(
-            'script, style, textarea, .cm-content, .canvas-artwork, .diff-lines, .language-switcher',
+            "script, style, textarea, .cm-content, .canvas-artwork, .diff-lines, .language-switcher",
           )
         )
           continue;
@@ -107,7 +107,9 @@ for (const [name, engine] of [
     await switchTo("en");
     await page.goto(base + "/en/tools/json");
     await page.getByRole("button", { name: "Format", exact: true }).click();
-    await expect(page.getByRole("alert")).toHaveText("Enter some content first.");
+    await expect(page.getByRole("alert")).toHaveText(
+      "Enter some content first.",
+    );
     await noChineseUI();
 
     for (const tool of [
@@ -129,9 +131,7 @@ for (const [name, engine] of [
     }
     const missing = await page.goto(base + "/en/missing");
     assert.equal(missing.status(), 404);
-    await page
-      .getByRole("heading", { name: /does not exist/i })
-      .waitFor();
+    await page.getByRole("heading", { name: /does not exist/i }).waitFor();
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
     await noChineseUI();
 

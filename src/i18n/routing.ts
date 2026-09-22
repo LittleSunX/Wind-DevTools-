@@ -5,8 +5,7 @@ export function parseLocalizedPath(pathname: string): {
   path: string;
 } {
   const normalized = pathname.replace(/\/+$/, "") || "/";
-  if (normalized === "/en")
-    return { language: "en", path: "/tools" };
+  if (normalized === "/en") return { language: "en", path: "/tools" };
   if (normalized.startsWith("/en/"))
     return {
       language: "en",

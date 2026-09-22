@@ -78,9 +78,7 @@ try {
     "utf8",
   );
   assert.ok(
-    zh.includes(
-      'rel="canonical" href="https://wind-devtools.test/tools/json"',
-    ),
+    zh.includes('rel="canonical" href="https://wind-devtools.test/tools/json"'),
   );
   assert.ok(
     en.includes(
@@ -133,9 +131,7 @@ try {
   assert.equal((sitemap.match(/<url>/g) || []).length, 22);
   assert.ok(sitemap.includes("xmlns:xhtml="));
   assert.ok(
-    sitemap.includes(
-      "<loc>https://wind-devtools.test/en/tools/json</loc>",
-    ),
+    sitemap.includes("<loc>https://wind-devtools.test/en/tools/json</loc>"),
   );
   assert.ok(
     (await readFile(path.join(fixture, "dist/robots.txt"), "utf8")).includes(

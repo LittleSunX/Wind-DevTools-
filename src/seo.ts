@@ -40,7 +40,8 @@ export function pageMetadata({
   return language === "en"
     ? {
         title: "Page not found | Wind DevTools",
-        description: "This page does not exist. Return to the developer toolbox.",
+        description:
+          "This page does not exist. Return to the developer toolbox.",
       }
     : {
         title: "页面不存在 | Wind DevTools",

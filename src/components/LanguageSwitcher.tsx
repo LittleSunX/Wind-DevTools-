@@ -1,10 +1,5 @@
 import { useEffect } from "react";
-import {
-  i18n,
-  languageKey,
-  supportedLanguages,
-  type Language,
-} from "../i18n";
+import { i18n, languageKey, supportedLanguages, type Language } from "../i18n";
 import { localizedPath, parseLocalizedPath } from "../i18n/routing";
 import { tr, useLocale } from "../i18n/react";
 
