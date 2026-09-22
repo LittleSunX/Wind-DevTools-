@@ -1,3 +1,4 @@
+import { tr } from "../i18n";
 import type { Options } from "./shared";
 import { renderDate } from "./date";
 export function timestampTool(input: string, options: Options) {
@@ -59,5 +60,5 @@ export function timestampTool(input: string, options: Options) {
       throw new Error("时间戳超出安全整数范围。");
     date = new Date(value * (options.unit === "s" ? 1000 : 1));
   }
-  return `日期时间\n${renderDate(date, zone)}\n\nISO 8601\n${date.toISOString()}\n\n秒级时间戳\n${Math.floor(date.getTime() / 1000)}\n\n毫秒级时间戳\n${date.getTime()}`;
+  return `${tr("日期时间")}\n${renderDate(date, zone)}\n\nISO 8601\n${date.toISOString()}\n\n${tr("秒级时间戳")}\n${Math.floor(date.getTime() / 1000)}\n\n${tr("毫秒级时间戳")}\n${date.getTime()}`;
 }

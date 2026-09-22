@@ -1,7 +1,10 @@
+import { tr, useLocale } from "../i18n/react";
 import { useEffect, useRef, useState } from "react";
 import type { createEditor, EditorOptions } from "./editor-runtime";
 
 export default function CodeEditor(props: EditorOptions) {
+  const locale = useLocale();
+  props = { ...props, locale };
   const host = useRef<HTMLDivElement>(null);
   const fallback = useRef<HTMLTextAreaElement>(null);
   const latest = useRef(props);
@@ -40,22 +43,24 @@ export default function CodeEditor(props: EditorOptions) {
         <textarea
           ref={fallback}
           id={props.id}
-          aria-label={props.label}
+          aria-label={tr(props.label)}
           aria-invalid={props.invalid || undefined}
           aria-describedby={props.invalid ? "tool-error" : undefined}
           value={props.value}
           onChange={(e) => props.onChange?.(e.target.value)}
           readOnly={props.readOnly}
           spellCheck={false}
-          placeholder={props.placeholder}
+          placeholder={tr(props.placeholder)}
         />
       )}
       <div className="code-editor-host" ref={host} />
       {(props.value.length > 200_000 || failed) && (
         <div className="editor-mode">
-          {failed
-            ? "基础编辑模式 · 刷新页面可重试加载高亮"
-            : "大文本模式 · 已暂停语法高亮"}
+          {tr(
+            failed
+              ? "基础编辑模式 · 刷新页面可重试加载高亮"
+              : "大文本模式 · 已暂停语法高亮",
+          )}
         </div>
       )}
     </div>

@@ -1,3 +1,4 @@
+import { tr, useLocale } from "../i18n/react";
 import { useState } from "react";
 import {
   canvasFonts,
@@ -19,6 +20,7 @@ export default function CanvasSettings({
   exporting: boolean;
   onReset: () => void;
 }) {
+  useLocale();
   const [customWidth, setCustomWidth] = useState(false);
   const widthChoice =
     customWidth || ![640, 800, 1200].includes(options.width)
@@ -32,16 +34,16 @@ export default function CanvasSettings({
     change: (v: string) => void,
   ) => (
     <label className="shot-field">
-      {label}
+      {tr(label)}
       <select
-        aria-label={label}
+        aria-label={tr(label)}
         value={value}
         onChange={(e) => change(e.target.value)}
         disabled={exporting}
       >
         {items.map(([v, l]) => (
           <option key={v} value={v}>
-            {l}
+            {tr(l)}
           </option>
         ))}
       </select>
@@ -49,14 +51,18 @@ export default function CanvasSettings({
   );
   return (
     <div className="shot-settings">
-      <div className="shot-theme-grid shot-wide" role="group" aria-label="主题">
+      <div
+        className="shot-theme-grid shot-wide"
+        role="group"
+        aria-label={tr("主题")}
+      >
         {themeChoices.map(([id, label]) => {
           const theme = themes[id];
           return (
             <button
               type="button"
               key={id}
-              aria-label={`应用${label}主题`}
+              aria-label={tr("应用{{name}}主题", { name: tr(label) })}
               aria-pressed={options.theme === id}
               disabled={exporting}
               onClick={() => update("theme", id)}
@@ -67,8 +73,8 @@ export default function CanvasSettings({
                 = <span style={{ color: theme.colors.string }}>"hello"</span>
               </span>
               <span>
-                {label}
-                {options.theme === id ? " ✓" : ""}
+                {tr(label)}
+                {tr(options.theme === id ? " ✓" : "")}
               </span>
             </button>
           );
@@ -101,10 +107,10 @@ export default function CanvasSettings({
           )}
           {widthChoice === "custom" && (
             <label className="shot-field shot-wide">
-              自定义宽度
+              {tr("自定义宽度")}
               <input
                 type="number"
-                aria-label="自定义宽度"
+                aria-label={tr("自定义宽度")}
                 min={320}
                 max={2400}
                 step={1}
@@ -126,10 +132,12 @@ export default function CanvasSettings({
               onChange={(e) => update("wrap", e.target.checked)}
               disabled={exporting}
             />
-            长行自动换行
+            {tr("长行自动换行")}
           </label>
           <p className="shot-setting-help shot-wide">
-            宽度包含外边距，按 1× 计算。换行只影响图片，续行不重复显示行号。
+            {tr(
+              "宽度包含外边距，按 1× 计算。换行只影响图片，续行不重复显示行号。",
+            )}
           </p>
         </>
       )}
@@ -149,10 +157,10 @@ export default function CanvasSettings({
       )}
       {options.background === "solid" && (
         <label className="shot-field">
-          背景颜色
+          {tr("背景颜色")}
           <input
             type="color"
-            aria-label="背景颜色"
+            aria-label={tr("背景颜色")}
             value={options.color}
             onChange={(e) => update("color", e.target.value)}
             disabled={exporting}
@@ -162,30 +170,30 @@ export default function CanvasSettings({
       {options.background === "custom-gradient" && (
         <>
           <label className="shot-field">
-            渐变起始色
+            {tr("渐变起始色")}
             <input
               type="color"
-              aria-label="渐变起始色"
+              aria-label={tr("渐变起始色")}
               value={options.gradientStart}
               onChange={(e) => update("gradientStart", e.target.value)}
               disabled={exporting}
             />
           </label>
           <label className="shot-field">
-            渐变结束色
+            {tr("渐变结束色")}
             <input
               type="color"
-              aria-label="渐变结束色"
+              aria-label={tr("渐变结束色")}
               value={options.gradientEnd}
               onChange={(e) => update("gradientEnd", e.target.value)}
               disabled={exporting}
             />
           </label>
           <label className="shot-field shot-wide">
-            渐变角度 · {options.gradientAngle}°
+            {tr("渐变角度 ·")} {options.gradientAngle}°
             <input
               type="range"
-              aria-label="渐变角度"
+              aria-label={tr("渐变角度")}
               min={0}
               max={360}
               step={15}
@@ -280,10 +288,10 @@ export default function CanvasSettings({
         (v) => update("windowStyle", v as ImageOptions["windowStyle"]),
       )}
       <label className="shot-field">
-        起始行号
+        {tr("起始行号")}
         <input
           type="number"
-          aria-label="起始行号"
+          aria-label={tr("起始行号")}
           min={1}
           max={9999}
           value={options.startLine}
@@ -297,11 +305,11 @@ export default function CanvasSettings({
         />
       </label>
       <label className="shot-field shot-wide">
-        高亮行
+        {tr("高亮行")}
         <input
           type="text"
-          aria-label="高亮行"
-          placeholder="例如 2,4-6"
+          aria-label={tr("高亮行")}
+          placeholder={tr("例如 2,4-6")}
           value={options.highlightLines}
           maxLength={120}
           onChange={(e) => update("highlightLines", e.target.value)}
@@ -309,7 +317,7 @@ export default function CanvasSettings({
         />
       </label>
       <p className="shot-setting-help shot-wide">
-        高亮行按当前显示行号填写，支持逗号和范围，例如 101,103-105。
+        {tr("高亮行按当前显示行号填写，支持逗号和范围，例如 101,103-105。")}
       </p>
       <label className="shot-check">
         <input
@@ -318,7 +326,7 @@ export default function CanvasSettings({
           onChange={(e) => update("lineNumbers", e.target.checked)}
           disabled={exporting}
         />
-        显示行号
+        {tr("显示行号")}
       </label>
       <label className="shot-check">
         <input
@@ -327,10 +335,10 @@ export default function CanvasSettings({
           onChange={(e) => update("windowBar", e.target.checked)}
           disabled={exporting}
         />
-        窗口标题栏
+        {tr("窗口标题栏")}
       </label>
       <p className="shot-setting-help shot-wide">
-        仅在本机记住外观偏好，不保存代码或窗口标题。
+        {tr("仅在本机记住外观偏好，不保存代码或窗口标题。")}
       </p>
       <button
         className="shot-wide"
@@ -340,7 +348,7 @@ export default function CanvasSettings({
           onReset();
         }}
       >
-        恢复默认外观
+        {tr("恢复默认外观")}
       </button>
     </div>
   );

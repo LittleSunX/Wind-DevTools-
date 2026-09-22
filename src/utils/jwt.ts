@@ -1,3 +1,4 @@
+import { MessageError, errorMessage, tr } from "../i18n";
 import { jsonTool } from "./json";
 function decodePart(part: string) {
   if (!/^[A-Za-z0-9_-]+$/.test(part))
@@ -28,21 +29,25 @@ export function jwtTool(input: string, now = Date.now()) {
     header = decodePart(parts[0]);
     payload = decodePart(parts[1]);
   } catch (error) {
-    throw new Error(
-      `JWT 解码失败：${error instanceof Error ? error.message : "编码或 JSON 无效"}`,
-    );
+    const detail = errorMessage(error, "编码或 JSON 无效");
+    throw new MessageError({
+      key: "JWT 解码失败：{{detail}}",
+      values: { detail: typeof detail === "string" ? { key: detail } : detail },
+    });
   }
   const times = ["exp", "iat", "nbf"].map((key) => {
     const value = payload.value[key];
     if (value === undefined)
-      return `${key}：未提供${key === "exp" ? "过期时间" : ""}`;
+      return tr(key === "exp" ? "{{key}}：未提供过期时间" : "{{key}}：未提供", {
+        key,
+      });
     if (
       typeof value !== "number" ||
       !Number.isFinite(value) ||
       !Number.isFinite(new Date(value * 1000).getTime())
     )
-      return `${key}：时间字段无效`;
-    return `${key}：${new Date(value * 1000).toISOString()}${key === "exp" ? (now >= value * 1000 ? " · 已过期" : " · 未到过期时间") : key === "nbf" && now < value * 1000 ? " · 尚未生效" : ""}`;
+      return tr("{{key}}：时间字段无效", { key });
+    return `${key}：${new Date(value * 1000).toISOString()}${key === "exp" ? (now >= value * 1000 ? tr(" · 已过期") : tr(" · 未到过期时间")) : key === "nbf" && now < value * 1000 ? tr(" · 尚未生效") : ""}`;
   });
-  return `Header\n${header.formatted}\n\nPayload\n${payload.formatted}\n\n时间信息（基于设备时钟）\n${times.join("\n")}\n\n⚠ 签名未经验证，以上结果不代表 Token 有效。`;
+  return `Header\n${header.formatted}\n\nPayload\n${payload.formatted}\n\n${tr("时间信息（基于设备时钟）")}\n${times.join("\n")}\n\n${tr("⚠ 签名未经验证，以上结果不代表 Token 有效。")}`;
 }

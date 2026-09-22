@@ -5,7 +5,10 @@ const browser = await chromium.launch({
   channel: process.env.PW_CHANNEL === "bundled" ? undefined : "chrome",
   headless: true,
 });
-const page = await browser.newPage({ viewport: { width: 1440, height: 1050 } });
+const page = await browser.newPage({
+  locale: "zh-CN",
+  viewport: { width: 1440, height: 1050 },
+});
 const errors = [];
 page.on("pageerror", (error) => errors.push(error.message));
 const base = process.env.TEST_URL || process.argv[2] || "http://localhost:4173";
@@ -132,7 +135,10 @@ try {
   assert.equal(missing.status(), 404);
   await page.getByRole("heading", { name: "这个工具还不存在。" }).waitFor();
   // Test local DST edge cases in an actual browser with a fixed IANA timezone.
-  const dst = await browser.newContext({ timezoneId: "America/New_York" });
+  const dst = await browser.newContext({
+    locale: "zh-CN",
+    timezoneId: "America/New_York",
+  });
   const dp = await dst.newPage();
   await dp.goto(base + "/tools/timestamp");
   await dp.getByLabel("转换方向").selectOption("date");

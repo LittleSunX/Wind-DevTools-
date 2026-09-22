@@ -6,6 +6,7 @@ const browser = await chromium.launch({
   channel: process.env.PW_CHANNEL === "bundled" ? undefined : "chrome",
 });
 const context = await browser.newContext({
+  locale: "zh-CN",
   viewport: { width: 1440, height: 1200 },
   permissions: ["clipboard-read", "clipboard-write"],
 });

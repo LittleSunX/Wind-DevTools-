@@ -1,8 +1,15 @@
+import { i18n, resolveLanguage, errorMessage } from "./i18n";
 import { checkInput, type Options } from "./utils/shared";
 self.onmessage = async (
-  event: MessageEvent<{ id: string; input: string; options: Options }>,
+  event: MessageEvent<{
+    id: string;
+    input: string;
+    options: Options;
+    language?: string;
+  }>,
 ) => {
   const { id, input, options } = event.data;
+  await i18n.changeLanguage(resolveLanguage(event.data.language ?? null, []));
   try {
     checkInput(input);
     let result: string;
@@ -43,7 +50,7 @@ self.onmessage = async (
     self.postMessage({ result });
   } catch (error) {
     self.postMessage({
-      error: error instanceof Error ? error.message : "处理失败，请检查输入。",
+      error: errorMessage(error),
     });
   }
 };

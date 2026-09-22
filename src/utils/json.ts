@@ -1,3 +1,4 @@
+import { MessageError, tr } from "../i18n";
 import type { Options } from "./shared";
 export function jsonTool(input: string, options: Options) {
   // Validate syntax, but never serialize the parsed numbers: retain original tokens.
@@ -9,11 +10,19 @@ export function jsonTool(input: string, options: Options) {
     if (match) {
       const before = input.slice(0, Number(match[1]));
       const lines = before.split("\n");
-      throw new Error(
-        `JSON 语法错误：第 ${lines.length} 行，第 ${lines.at(-1)!.length + 1} 列。${message}`,
-      );
+      throw new MessageError({
+        key: "JSON 语法错误：第 {{line}} 行，第 {{column}} 列。{{detail}}",
+        values: {
+          line: lines.length,
+          column: lines.at(-1)!.length + 1,
+          detail: message,
+        },
+      });
     }
-    throw new Error(`JSON 语法错误：${message}`);
+    throw new MessageError({
+      key: "JSON 语法错误：{{detail}}",
+      values: { detail: message },
+    });
   }
   const tokens = input.match(/"(?:\\.|[^"\\])*"|[^\s{}\[\],:]+|[{}\[\],:]/g)!;
   const stack: (Set<string> | null)[] = [];
@@ -28,11 +37,15 @@ export function jsonTool(input: string, options: Options) {
       const key = JSON.parse(token) as string;
       const keys = stack.at(-1)!;
       if (keys.has(key))
-        throw new Error(`存在重复键「${key}」，请修正后再转换。`);
+        throw new MessageError({
+          key: "存在重复键「{{key}}」，请修正后再转换。",
+          values: { key },
+        });
       keys.add(key);
     }
   }
-  if (options.action === "validate") return "✓ JSON 语法正确，未发现重复键。";
+  if (options.action === "validate")
+    return tr("✓ JSON 语法正确，未发现重复键。");
   if (options.action === "minify") return tokens.join("");
   const indent = " ".repeat(Number(options.indent || 2));
   let depth = 0;

@@ -31,6 +31,7 @@ jobs:
           npm run test:code-image
           npm run test:compat
           npm run test:sidebar
+          npm run test:i18n
         env:
           PW_CHANNEL: bundled
       - uses: actions/upload-artifact@v4

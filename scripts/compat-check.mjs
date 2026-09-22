@@ -11,6 +11,7 @@ for (const [name, engine] of [
 ]) {
   const browser = await engine.launch();
   const page = await browser.newPage({
+    locale: "zh-CN",
     viewport: { width: 1440, height: 1200 },
   });
   page.setDefaultTimeout(15000);

@@ -14,7 +14,8 @@
     "test:build": "node scripts/build-check.mjs",
     "test:code-image": "node scripts/code-image-check.mjs",
     "test:compat": "node scripts/compat-check.mjs",
-    "test:sidebar": "node scripts/sidebar-check.mjs"
+    "test:sidebar": "node scripts/sidebar-check.mjs",
+    "test:i18n": "node scripts/i18n-check.mjs"
   },
   "dependencies": {
     "@codemirror/commands": "^6.11.1",
@@ -27,9 +28,11 @@
     "@lezer/highlight": "^1.2.3",
     "cron-parser": "^5.0.0",
     "html-to-image": "^1.11.13",
+    "i18next": "^26.4.2",
     "prismjs": "^1.30.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-i18next": "^17.0.14",
     "sql-formatter": "^15.0.0"
   },
   "devDependencies": {

@@ -1,3 +1,5 @@
+import type { Message } from "../i18n";
+import { tr, useLocale } from "../i18n/react";
 import type { RefObject } from "react";
 import CanvasPopover from "./CanvasPopover";
 import {
@@ -16,7 +18,7 @@ type Props = {
   canExport: boolean;
   exporting: boolean;
   setExporting: (value: boolean) => void;
-  setNotice: (value: string) => void;
+  setNotice: (value: Message) => void;
   update: <K extends keyof ImageOptions>(
     key: K,
     value: ImageOptions[K],
@@ -32,6 +34,7 @@ export default function CanvasActions({
   setNotice,
   update,
 }: Props) {
+  useLocale();
   function hideActionMenu(target: HTMLElement) {
     target.closest<HTMLElement>("[popover]")?.hidePopover();
   }
@@ -186,67 +189,67 @@ export default function CanvasActions({
     <div className="canvas-export-actions">
       <CanvasPopover
         alignEnd
-        label="复制"
-        title="复制"
+        label={tr("复制")}
+        title={tr("复制")}
         disabled={!canExport || exporting}
       >
         <div className="canvas-action-menu">
           <button
             type="button"
-            aria-label="复制图片"
+            aria-label={tr("复制图片")}
             onClick={(event) => {
               hideActionMenu(event.currentTarget);
               void copyImage();
             }}
           >
-            <span>复制图片</span>
+            <span>{tr("复制图片")}</span>
             <small>PNG</small>
           </button>
           <button
             type="button"
-            aria-label="在新标签页打开"
+            aria-label={tr("在新标签页打开")}
             onClick={(event) => {
               hideActionMenu(event.currentTarget);
               void openPngPreview();
             }}
           >
-            <span>在新标签页打开</span>
-            <small>PNG 预览</small>
+            <span>{tr("在新标签页打开")}</span>
+            <small>{tr("PNG 预览")}</small>
           </button>
           <details className="canvas-advanced-copy">
-            <summary>高级复制</summary>
+            <summary>{tr("高级复制")}</summary>
             <button
               type="button"
-              aria-label="复制 SVG 源码"
+              aria-label={tr("复制 SVG 源码")}
               onClick={(event) => {
                 hideActionMenu(event.currentTarget);
                 void copySvgSource();
               }}
             >
-              <span>复制 SVG 源码</span>
+              <span>{tr("复制 SVG 源码")}</span>
               <small>SVG</small>
             </button>
             <button
               type="button"
-              aria-label="复制 PNG Data URL"
+              aria-label={tr("复制 PNG Data URL")}
               onClick={(event) => {
                 hideActionMenu(event.currentTarget);
                 void copyPngText("data-url");
               }}
             >
-              <span>复制 PNG Data URL</span>
+              <span>{tr("复制 PNG Data URL")}</span>
               <small>data:image/png</small>
             </button>
             <button
               type="button"
-              aria-label="复制 PNG Base64"
+              aria-label={tr("复制 PNG Base64")}
               onClick={(event) => {
                 hideActionMenu(event.currentTarget);
                 void copyPngText("base64");
               }}
             >
-              <span>复制 PNG Base64</span>
-              <small>纯 Base64</small>
+              <span>{tr("复制 PNG Base64")}</span>
+              <small>{tr("纯 Base64")}</small>
             </button>
           </details>
         </div>
@@ -254,17 +257,17 @@ export default function CanvasActions({
 
       <CanvasPopover
         alignEnd
-        label={exporting ? "正在导出…" : "导出"}
-        title="导出"
+        label={tr(exporting ? "正在导出…" : "导出")}
+        title={tr("导出")}
         disabled={!canExport || exporting}
       >
         <div className="canvas-export-menu">
           <div
             className="canvas-export-scale"
             role="group"
-            aria-label="PNG 导出倍率"
+            aria-label={tr("PNG 导出倍率")}
           >
-            <span>PNG 导出倍率</span>
+            <span>{tr("PNG 导出倍率")}</span>
             <div>
               {[1, 2, 3].map((scale) => (
                 <button
@@ -281,25 +284,25 @@ export default function CanvasActions({
           <div className="canvas-action-menu">
             <button
               type="button"
-              aria-label="下载 PNG"
+              aria-label={tr("下载 PNG")}
               onClick={(event) => {
                 hideActionMenu(event.currentTarget);
                 void downloadPng();
               }}
             >
-              <span>下载 PNG</span>
+              <span>{tr("下载 PNG")}</span>
               <small>{options.scale}×</small>
             </button>
             <button
               type="button"
-              aria-label="下载 SVG"
+              aria-label={tr("下载 SVG")}
               onClick={(event) => {
                 hideActionMenu(event.currentTarget);
                 void downloadSvg();
               }}
             >
-              <span>下载 SVG</span>
-              <small>SVG · 不受倍率影响</small>
+              <span>{tr("下载 SVG")}</span>
+              <small>{tr("SVG · 不受倍率影响")}</small>
             </button>
           </div>
         </div>

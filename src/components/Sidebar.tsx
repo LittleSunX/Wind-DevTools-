@@ -1,3 +1,4 @@
+import { tr, useLocale } from "../i18n/react";
 import { useEffect, useRef, useState } from "react";
 import { tools } from "../catalog";
 
@@ -149,48 +150,49 @@ export default function Sidebar({
   collapsed?: boolean;
   onNavigate?: () => void;
 }) {
+  useLocale();
   return (
     <>
       <div className="sidebar-caption">WORKSPACE</div>
-      <nav aria-label="工具导航" onClick={onNavigate}>
+      <nav aria-label={tr("工具导航")} onClick={onNavigate}>
         <a
           className={`side-home ${isHome ? "selected" : ""}`}
           href="/tools"
-          aria-label="全部工具"
+          aria-label={tr("全部工具")}
           aria-current={isHome ? "page" : undefined}
-          title={collapsed ? "全部工具" : undefined}
+          title={tr(collapsed ? "全部工具" : undefined)}
         >
           <span className="side-icon" aria-hidden="true">
             ▦
           </span>
-          <span className="side-label">全部工具</span>
+          <span className="side-label">{tr("全部工具")}</span>
           <small>{String(tools.length).padStart(2, "0")}</small>
         </a>
-        <div className="sidebar-caption section-caption">开发工具</div>
+        <div className="sidebar-caption section-caption">{tr("开发工具")}</div>
         {tools.map((t) => (
           <a
             className={`side-link ${currentId === t.id ? "selected" : ""}`}
             href={`/tools/${t.id}`}
             key={t.id}
-            aria-label={t.name}
+            aria-label={tr(t.name)}
             aria-current={currentId === t.id ? "page" : undefined}
-            title={collapsed ? t.name : undefined}
+            title={tr(collapsed ? t.name : undefined)}
           >
             <span className="side-icon" aria-hidden="true">
               {t.icon}
             </span>
-            <span className="side-label">{t.name}</span>
+            <span className="side-label">{tr(t.name)}</span>
             {currentId === t.id && <span className="active-dot" />}
           </a>
         ))}
       </nav>
       <div className="sidebar-bottom">
         <span className="tiny-lock">⌑</span>
-        <strong>放心粘贴，安心处理</strong>
+        <strong>{tr("放心粘贴，安心处理")}</strong>
         <p>
-          无需登录，无需上传。
+          {tr("无需登录，无需上传。")}
           <br />
-          每一次处理，都在本地完成。
+          {tr("每一次处理，都在本地完成。")}
         </p>
         <span className="small-mono">BUILT FOR DEVELOPERS</span>
       </div>

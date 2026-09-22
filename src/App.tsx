@@ -1,3 +1,6 @@
+import { i18n, type Message } from "./i18n";
+import { tr, useLocale } from "./i18n/react";
+import LanguageSwitcher from "./components/LanguageSwitcher";
 import Sidebar, { SidebarIcon, useSidebar } from "./components/Sidebar";
 import CodeEditor from "./components/CodeEditor";
 import CodeImage from "./components/CodeImage";
@@ -39,15 +42,15 @@ function Select({
 }) {
   return (
     <label className="select-label">
-      {label}
+      {tr(label)}
       <select
-        aria-label={label}
+        aria-label={tr(label)}
         value={value}
         onChange={(e) => onChange(e.target.value)}
       >
         {items.map(([v, l]) => (
           <option key={v} value={v}>
-            {l}
+            {tr(l)}
           </option>
         ))}
       </select>
@@ -62,15 +65,24 @@ function Icon({ children }: { children: ReactNode }) {
   );
 }
 export function App({ path = "/tools" }: { path?: string }) {
+  const locale = useLocale();
   const normalized = path.replace(/\/$/, "") || "/";
   const current = tools.find((t) => normalized === `/tools/${t.id}`);
   const isHome = normalized === "/" || normalized === "/tools";
   const sidebar = useSidebar();
+  useEffect(() => {
+    document.title = `${tr(current?.name ?? (isHome ? "开发者工具箱" : "页面不存在"))} | Wind DevTools`;
+    const description = document.querySelector('meta[name="description"]');
+    description?.setAttribute(
+      "content",
+      tr(current?.description ?? "小工具，解决开发中的日常问题。"),
+    );
+  }, [locale, current, isHome]);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("全部工具");
   const [input, setInput] = useState("");
   const [output, setOutput] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState<Message>("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [replace, setReplace] = useState(false);
@@ -181,6 +193,7 @@ export function App({ path = "/tools" }: { path?: string }) {
       active.postMessage({
         id: current.id,
         input,
+        language: i18n.resolvedLanguage,
         options: { ...options, action },
       });
       timer.current = setTimeout(() => {
@@ -247,21 +260,21 @@ export function App({ path = "/tools" }: { path?: string }) {
   const visible = tools.filter(
     (t) =>
       (category === "全部工具" || t.category === category) &&
-      `${t.name} ${t.id} ${t.description} ${t.tags.join(" ")}`
+      `${t.name} ${tr(t.name)} ${t.id} ${t.description} ${tr(t.description)} ${t.tags.join(" ")} ${t.tags.map((tag) => tr(tag)).join(" ")}`
         .toLowerCase()
         .includes(search.toLowerCase().trim()),
   );
   return (
     <div className="app">
       <a className="skip-link" href="#main">
-        跳转到主要内容
+        {tr("跳转到主要内容")}
       </a>
       <header className="topbar">
         <button
           className="sidebar-toggle desktop-sidebar-toggle"
           type="button"
-          aria-label={sidebar.collapsed ? "展开侧边栏" : "收起侧边栏"}
-          title={sidebar.collapsed ? "展开侧边栏" : "收起侧边栏"}
+          aria-label={tr(sidebar.collapsed ? "展开侧边栏" : "收起侧边栏")}
+          title={tr(sidebar.collapsed ? "展开侧边栏" : "收起侧边栏")}
           aria-expanded={!sidebar.collapsed}
           aria-controls="desktop-sidebar"
           onClick={sidebar.toggleDesktop}
@@ -272,7 +285,7 @@ export function App({ path = "/tools" }: { path?: string }) {
           className="sidebar-toggle mobile-sidebar-toggle"
           type="button"
           ref={sidebar.mobileToggle}
-          aria-label="打开工具导航"
+          aria-label={tr("打开工具导航")}
           aria-expanded={sidebar.mobileOpen}
           aria-controls="mobile-sidebar"
           onClick={sidebar.openMobile}
@@ -286,15 +299,16 @@ export function App({ path = "/tools" }: { path?: string }) {
           <span className="brand-divider" aria-hidden="true" />
           <span className="brand-product">DevTools</span>
         </a>
-        <nav aria-label="主导航">
+        <nav aria-label={tr("主导航")}>
           <a href="/tools" className="nav-active">
-            工具箱
+            {tr("工具箱")}
           </a>
-          <a href="/tools#about">关于</a>
+          <a href="/tools#about">{tr("关于")}</a>
         </nav>
         <span className="header-local">
-          <i /> 数据留在浏览器
+          <i /> {tr("数据留在浏览器")}
         </span>
+        <LanguageSwitcher />
         <span className="version">v1.0</span>
       </header>
       <div className="layout">
@@ -302,7 +316,7 @@ export function App({ path = "/tools" }: { path?: string }) {
           id="desktop-sidebar"
           ref={sidebar.desktop}
           className={`sidebar ${sidebar.collapsed ? "is-collapsed" : ""}`}
-          aria-label="侧边栏"
+          aria-label={tr("侧边栏")}
         >
           {!sidebar.collapsed && (
             <button
@@ -310,13 +324,13 @@ export function App({ path = "/tools" }: { path?: string }) {
               type="button"
               aria-pressed={sidebar.pinned}
               onClick={sidebar.togglePin}
-              title={
+              title={tr(
                 sidebar.pinned
                   ? "取消固定后，侧栏闲置 30 秒自动收起"
-                  : "固定后侧栏不会自动收起"
-              }
+                  : "固定后侧栏不会自动收起",
+              )}
             >
-              {sidebar.pinned ? "已固定展开" : "固定展开"}
+              {tr(sidebar.pinned ? "已固定展开" : "固定展开")}
             </button>
           )}
           <Sidebar
@@ -329,7 +343,7 @@ export function App({ path = "/tools" }: { path?: string }) {
           id="mobile-sidebar"
           className="sidebar-drawer"
           ref={sidebar.dialog}
-          aria-label="工具导航菜单"
+          aria-label={tr("工具导航菜单")}
           onClose={sidebar.onMobileClose}
           onKeyDown={(event) => {
             if (event.key !== "Tab") return;
@@ -361,13 +375,13 @@ export function App({ path = "/tools" }: { path?: string }) {
           }}
         >
           <div className="sidebar-drawer-heading">
-            <strong>工具导航</strong>
+            <strong>{tr("工具导航")}</strong>
             <button
               type="button"
-              aria-label="关闭工具导航"
+              aria-label={tr("关闭工具导航")}
               onClick={sidebar.closeMobile}
             >
-              关闭
+              {tr("关闭")}
             </button>
           </div>
           <Sidebar
@@ -387,19 +401,19 @@ export function App({ path = "/tools" }: { path?: string }) {
                   <i /> LESS FRICTION. MORE FLOW.
                 </span>
                 <h1>
-                  常用工具，
+                  {tr("常用工具，")}
                   <br />
-                  <em>刚刚好。</em>
+                  <em>{tr("刚刚好。")}</em>
                 </h1>
                 <p>
-                  为开发中的每一个小任务，准备一个顺手的工具。
+                  {tr("为开发中的每一个小任务，准备一个顺手的工具。")}
                   <br />
-                  简单、免费，数据只在你的浏览器里流转。
+                  {tr("简单、免费，数据只在你的浏览器里流转。")}
                 </p>
                 <div className="hero-tags">
-                  <span>✓ 无需注册</span>
-                  <span>✓ 本地处理</span>
-                  <span>✓ 打开即用</span>
+                  <span>{tr("✓ 无需注册")}</span>
+                  <span>{tr("✓ 本地处理")}</span>
+                  <span>{tr("✓ 打开即用")}</span>
                 </div>
                 <div className="hero-art" aria-hidden="true">
                   <div className="art-grid" />
@@ -432,24 +446,24 @@ export function App({ path = "/tools" }: { path?: string }) {
                 <div className="directory-top">
                   <div>
                     <h2 id="directory-title">
-                      工具箱{" "}
+                      {tr("工具箱")}{" "}
                       <span>{String(tools.length).padStart(2, "0")}</span>
                     </h2>
-                    <p>小工具，解决开发中的日常问题。</p>
+                    <p>{tr("小工具，解决开发中的日常问题。")}</p>
                   </div>
                   <label className="search">
                     <span aria-hidden="true">⌕</span>
                     <input
                       ref={searchRef}
-                      aria-label="搜索工具"
+                      aria-label={tr("搜索工具")}
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
-                      placeholder="搜索工具名称或关键词…"
+                      placeholder={tr("搜索工具名称或关键词…")}
                     />
                     <kbd>/</kbd>
                   </label>
                 </div>
-                <div className="filters" aria-label="工具分类">
+                <div className="filters" aria-label={tr("工具分类")}>
                   {categories.map((c) => (
                     <button
                       key={c}
@@ -457,10 +471,12 @@ export function App({ path = "/tools" }: { path?: string }) {
                       className={c === category ? "active" : ""}
                       onClick={() => setCategory(c)}
                     >
-                      {c}
+                      {tr(c)}
                     </button>
                   ))}
-                  <span>{visible.length} 个工具</span>
+                  <span>
+                    {tr("{{count}} 个工具", { count: visible.length })}
+                  </span>
                 </div>
                 <div className="tool-grid">
                   {visible.map((t, i) => (
@@ -471,14 +487,14 @@ export function App({ path = "/tools" }: { path?: string }) {
                     >
                       <div className="card-top">
                         <Icon>{t.icon}</Icon>
-                        <span className="card-category">{t.category}</span>
+                        <span className="card-category">{tr(t.category)}</span>
                       </div>
-                      <h3>{t.name}</h3>
-                      <p>{t.description}</p>
+                      <h3>{tr(t.name)}</h3>
+                      <p>{tr(t.description)}</p>
                       <div className="card-bottom">
                         <div>
                           {t.tags.slice(0, 2).map((tag) => (
-                            <span key={tag}>{tag}</span>
+                            <span key={tag}>{tr(tag)}</span>
                           ))}
                         </div>
                         <span className="card-arrow">↗</span>
@@ -489,15 +505,17 @@ export function App({ path = "/tools" }: { path?: string }) {
                 </div>
                 {!visible.length && (
                   <div className="empty-search">
-                    没有找到匹配的工具。试试 JSON、时间戳或 SQL。
+                    {tr("没有找到匹配的工具。试试 JSON、时间戳或 SQL。")}
                   </div>
                 )}
               </section>
               <section className="about-strip" id="about">
                 <span>⌘</span>
                 <div>
-                  <h3>专注工具本身，把时间留给创造。</h3>
-                  <p>Wind DevTools 不保存输入内容，也不会上传处理结果。</p>
+                  <h3>{tr("专注工具本身，把时间留给创造。")}</h3>
+                  <p>
+                    {tr("Wind DevTools 不保存输入内容，也不会上传处理结果。")}
+                  </p>
                 </div>
                 <span className="about-sign">Less, but better.</span>
               </section>
@@ -509,28 +527,29 @@ export function App({ path = "/tools" }: { path?: string }) {
           ) : current ? (
             <>
               <div className="breadcrumb">
-                <a href="/tools">工具箱</a>
+                <a href="/tools">{tr("工具箱")}</a>
                 <span>/</span>
-                {current.name}
+                {tr(current.name)}
               </div>
               <section className="tool-heading">
                 <div>
                   <div className="eyebrow">
-                    {current.category} / {current.id.toUpperCase()}
+                    {tr(current.category)} / {current.id.toUpperCase()}
                   </div>
-                  <h1>{current.name}</h1>
-                  <p>{current.description}</p>
+                  <h1>{tr(current.name)}</h1>
+                  <p>{tr(current.description)}</p>
                 </div>
                 <Icon>{current.icon}</Icon>
               </section>
               <div className="privacy-banner">
-                <span>⌑</span> 数据仅在当前浏览器处理，刷新后不会自动恢复。
+                <span>⌑</span>{" "}
+                {tr("数据仅在当前浏览器处理，刷新后不会自动恢复。")}
                 <span className="local-badge">LOCAL ONLY</span>
               </div>
               {current.id === "timestamp" && (
                 <div className="live-time">
                   <span>
-                    <i /> 当前时间戳
+                    <i /> {tr("当前时间戳")}
                   </span>
                   <strong>{now ?? "—"}</strong>
                   <button
@@ -544,14 +563,14 @@ export function App({ path = "/tools" }: { path?: string }) {
                       changeInput(String(Date.now()));
                     }}
                   >
-                    填入当前时间 ↙
+                    {tr("填入当前时间 ↙")}
                   </button>
                 </div>
               )}
               <div className="options-bar">
                 {(current.id === "json" || current.id === "sql") && (
                   <Select
-                    label="缩进"
+                    label={tr("缩进")}
                     value={options.indent!}
                     items={[
                       ["2", "2 个空格"],
@@ -563,7 +582,7 @@ export function App({ path = "/tools" }: { path?: string }) {
                 {current.id === "sql" && (
                   <>
                     <Select
-                      label="SQL 方言"
+                      label={tr("SQL 方言")}
                       value={options.dialect!}
                       items={[
                         ["mysql", "MySQL"],
@@ -573,7 +592,7 @@ export function App({ path = "/tools" }: { path?: string }) {
                       onChange={(v) => option("dialect", v)}
                     />
                     <Select
-                      label="关键字"
+                      label={tr("关键字")}
                       value={options.keyword!}
                       items={[
                         ["upper", "大写"],
@@ -586,7 +605,7 @@ export function App({ path = "/tools" }: { path?: string }) {
                 {current.id === "timestamp" && (
                   <>
                     <Select
-                      label="转换方向"
+                      label={tr("转换方向")}
                       value={options.direction!}
                       items={[
                         ["timestamp", "时间戳 → 日期"],
@@ -595,7 +614,7 @@ export function App({ path = "/tools" }: { path?: string }) {
                       onChange={(v) => option("direction", v)}
                     />
                     <Select
-                      label="输入单位"
+                      label={tr("输入单位")}
                       value={options.unit!}
                       items={[
                         ["ms", "毫秒（ms）"],
@@ -607,7 +626,7 @@ export function App({ path = "/tools" }: { path?: string }) {
                 )}
                 {current.id === "cron" && (
                   <Select
-                    label="表达式模式"
+                    label={tr("表达式模式")}
                     value={options.mode!}
                     items={[
                       ["quartz", "Quartz · 6 字段"],
@@ -619,7 +638,7 @@ export function App({ path = "/tools" }: { path?: string }) {
                 {current.id === "codec" && (
                   <>
                     <Select
-                      label="编码类型"
+                      label={tr("编码类型")}
                       value={options.codec!}
                       items={[
                         ["base64", "Base64"],
@@ -628,7 +647,7 @@ export function App({ path = "/tools" }: { path?: string }) {
                       onChange={(v) => option("codec", v)}
                     />
                     <Select
-                      label="操作"
+                      label={tr("操作")}
                       value={options.codecDirection!}
                       items={[
                         ["encode", "编码"],
@@ -641,7 +660,7 @@ export function App({ path = "/tools" }: { path?: string }) {
                 {current.id === "json-type" && (
                   <>
                     <Select
-                      label="目标语言"
+                      label={tr("目标语言")}
                       value={options.target!}
                       items={[
                         ["typescript", "TypeScript"],
@@ -650,9 +669,9 @@ export function App({ path = "/tools" }: { path?: string }) {
                       onChange={(v) => option("target", v)}
                     />
                     <label className="select-label">
-                      根类型名
+                      {tr("根类型名")}
                       <input
-                        aria-label="根类型名"
+                        aria-label={tr("根类型名")}
                         value={options.rootName || ""}
                         maxLength={40}
                         onChange={(event) =>
@@ -665,7 +684,7 @@ export function App({ path = "/tools" }: { path?: string }) {
                 {current.id === "text" && (
                   <>
                     <Select
-                      label="处理方式"
+                      label={tr("处理方式")}
                       value={options.textAction!}
                       items={[
                         ["dedupe", "按行去重"],
@@ -682,9 +701,9 @@ export function App({ path = "/tools" }: { path?: string }) {
                     />
                     {options.textAction === "prefix" && (
                       <label className="select-label">
-                        前缀
+                        {tr("前缀")}
                         <input
-                          aria-label="前缀"
+                          aria-label={tr("前缀")}
                           value={options.prefix || ""}
                           onChange={(event) =>
                             option("prefix", event.target.value)
@@ -694,9 +713,9 @@ export function App({ path = "/tools" }: { path?: string }) {
                     )}
                     {options.textAction === "suffix" && (
                       <label className="select-label">
-                        后缀
+                        {tr("后缀")}
                         <input
-                          aria-label="后缀"
+                          aria-label={tr("后缀")}
                           value={options.suffix || ""}
                           onChange={(event) =>
                             option("suffix", event.target.value)
@@ -708,7 +727,7 @@ export function App({ path = "/tools" }: { path?: string }) {
                 )}
                 {(current.id === "timestamp" || current.id === "cron") && (
                   <Select
-                    label="时区"
+                    label={tr("时区")}
                     value={options.zone!}
                     items={[
                       ["UTC", "UTC"],
@@ -724,13 +743,15 @@ export function App({ path = "/tools" }: { path?: string }) {
                       checked={wrap}
                       onChange={(e) => setWrap(e.target.checked)}
                     />
-                    自动换行
+                    {tr("自动换行")}
                   </label>
                 )}
                 <span className="option-hint">
-                  {current.id === "jwt"
-                    ? "仅解码 · 不验证签名"
-                    : "⌘ / Ctrl + Enter 执行"}
+                  {tr(
+                    current.id === "jwt"
+                      ? "仅解码 · 不验证签名"
+                      : "⌘ / Ctrl + Enter 执行",
+                  )}
                 </span>
               </div>
               {current.id === "cron" && (
@@ -749,7 +770,7 @@ export function App({ path = "/tools" }: { path?: string }) {
                         changeInput(options.mode === "linux" ? linux : quartz)
                       }
                     >
-                      {label}
+                      {tr(label)}
                     </button>
                   ))}
                 </div>
@@ -767,30 +788,34 @@ export function App({ path = "/tools" }: { path?: string }) {
                 <section className="editor-panel">
                   <div className="editor-header">
                     <label htmlFor="tool-input">
-                      输入 <span>INPUT</span>
+                      {tr("输入")} <span>INPUT</span>
                     </label>
                     <button
                       onClick={() =>
                         input ? setReplace(true) : changeInput(example())
                       }
                     >
-                      加载示例
+                      {tr("加载示例")}
                     </button>
-                    <button onClick={() => changeInput("")}>清空</button>
+                    <button onClick={() => changeInput("")}>
+                      {tr("清空")}
+                    </button>
                   </div>
                   {replace && (
                     <div className="replace-prompt">
-                      用示例替换现有输入？
+                      {tr("用示例替换现有输入？")}
                       <button onClick={() => changeInput(example())}>
-                        替换
+                        {tr("替换")}
                       </button>
-                      <button onClick={() => setReplace(false)}>取消</button>
+                      <button onClick={() => setReplace(false)}>
+                        {tr("取消")}
+                      </button>
                     </div>
                   )}
                   {codeLanguage ? (
                     <CodeEditor
                       id="tool-input"
-                      label="输入"
+                      label={tr("输入")}
                       value={input}
                       language={codeLanguage}
                       dialect={options.dialect}
@@ -798,27 +823,31 @@ export function App({ path = "/tools" }: { path?: string }) {
                       wrap={wrap}
                       invalid={!!error}
                       onChange={changeInput}
-                      placeholder="粘贴代码，或点击「加载示例」开始…"
+                      placeholder={tr("粘贴代码，或点击「加载示例」开始…")}
                     />
                   ) : (
                     <textarea
+                      aria-label={tr("输入")}
                       id="tool-input"
                       aria-invalid={!!error}
                       aria-describedby={error ? "tool-error" : undefined}
                       spellCheck={false}
                       value={input}
                       onChange={(e) => changeInput(e.target.value)}
-                      placeholder={
+                      placeholder={tr(
                         current.id === "timestamp" &&
-                        options.direction === "date"
+                          options.direction === "date"
                           ? "2026-09-14 00:00:00"
-                          : `在这里粘贴${current.name.replace("格式化", "").replace("解析", "")}内容…\n\n也可以点击「加载示例」开始。`
-                      }
+                          : tr(
+                              "在这里粘贴{{name}}内容…\n\n也可以点击「加载示例」开始。",
+                              { name: tr(current.name) },
+                            ),
+                      )}
                     />
                   )}
                   {error && (
                     <div id="tool-error" className="error-box" role="alert">
-                      {error}
+                      {tr(error)}
                     </div>
                   )}
                   <div className="action-bar">
@@ -827,28 +856,30 @@ export function App({ path = "/tools" }: { path?: string }) {
                       disabled={busy}
                       onClick={() => run()}
                     >
-                      {current.id === "timestamp"
-                        ? "转换"
-                        : current.id === "jwt"
-                          ? "解析 JWT"
-                          : current.id === "cron"
-                            ? "计算执行时间"
-                            : current.id === "codec"
-                              ? "转换"
-                              : current.id === "json-type"
-                                ? "生成类型"
-                                : current.id === "text"
-                                  ? "处理"
-                                  : "格式化"}{" "}
+                      {tr(
+                        current.id === "timestamp"
+                          ? "转换"
+                          : current.id === "jwt"
+                            ? "解析 JWT"
+                            : current.id === "cron"
+                              ? "计算执行时间"
+                              : current.id === "codec"
+                                ? "转换"
+                                : current.id === "json-type"
+                                  ? "生成类型"
+                                  : current.id === "text"
+                                    ? "处理"
+                                    : "格式化",
+                      )}{" "}
                       <span aria-hidden="true">↗</span>
                     </button>
                     {current.id === "json" && (
                       <>
                         <button disabled={busy} onClick={() => run("minify")}>
-                          压缩
+                          {tr("压缩")}
                         </button>
                         <button disabled={busy} onClick={() => run("validate")}>
-                          校验
+                          {tr("校验")}
                         </button>
                       </>
                     )}
@@ -859,35 +890,35 @@ export function App({ path = "/tools" }: { path?: string }) {
                           setNotice("已取消处理");
                         }}
                       >
-                        取消处理
+                        {tr("取消处理")}
                       </button>
                     )}
                   </div>
                   <div className="editor-footer">
-                    <span>{input.length.toLocaleString()} 字符</span>
-                    <span>最大 5 MiB · UTF-8</span>
+                    <span>{tr("{{count}} 字符", { count: input.length })}</span>
+                    <span>{tr("最大 5 MiB · UTF-8")}</span>
                   </div>
                 </section>
                 <section className="editor-panel output-panel" aria-busy={busy}>
                   <div className="editor-header">
                     <label htmlFor="tool-output">
-                      结果 <span>OUTPUT</span>
+                      {tr("结果")} <span>OUTPUT</span>
                     </label>
                     <button disabled={!output} onClick={copy}>
-                      复制
+                      {tr("复制")}
                     </button>
                     <button disabled={!output} onClick={download}>
-                      下载
+                      {tr("下载")}
                     </button>
                     <button disabled={!output} onClick={sendToCanvas}>
-                      发送到代码画布
+                      {tr("发送到代码画布")}
                     </button>
                   </div>
                   <div className="output-wrap">
                     {codeLanguage ? (
                       <CodeEditor
                         id="tool-output"
-                        label="处理结果"
+                        label={tr("处理结果")}
                         value={output}
                         language={codeLanguage}
                         dialect={options.dialect}
@@ -898,7 +929,7 @@ export function App({ path = "/tools" }: { path?: string }) {
                     ) : (
                       <textarea
                         id="tool-output"
-                        aria-label="处理结果"
+                        aria-label={tr("处理结果")}
                         readOnly
                         value={output}
                         spellCheck={false}
@@ -906,20 +937,24 @@ export function App({ path = "/tools" }: { path?: string }) {
                     )}
                     {!output && (
                       <div className="output-empty">
-                        <span>{busy ? "↻" : error ? "!" : "⌁"}</span>
+                        <span>{tr(busy ? "↻" : error ? "!" : "⌁")}</span>
                         <strong>
-                          {busy
-                            ? "正在本地处理…"
-                            : error
-                              ? "请检查输入"
-                              : "准备好，随时开始"}
+                          {tr(
+                            busy
+                              ? "正在本地处理…"
+                              : error
+                                ? "请检查输入"
+                                : "准备好，随时开始",
+                          )}
                         </strong>
                         <p>
-                          {busy
-                            ? "你可以随时取消处理"
-                            : error
-                              ? "修正后再次执行，即可查看结果"
-                              : "处理结果将显示在这里"}
+                          {tr(
+                            busy
+                              ? "你可以随时取消处理"
+                              : error
+                                ? "修正后再次执行，即可查看结果"
+                                : "处理结果将显示在这里",
+                          )}
                         </p>
                       </div>
                     )}
@@ -928,50 +963,56 @@ export function App({ path = "/tools" }: { path?: string }) {
                     <span
                       className={`result-status ${busy ? "is-busy" : error ? "is-error" : output ? "is-done" : ""}`}
                     >
-                      {busy
-                        ? "正在处理"
-                        : error
-                          ? "输入有误"
-                          : output
-                            ? "处理完成"
-                            : "等待处理"}
+                      {tr(
+                        busy
+                          ? "正在处理"
+                          : error
+                            ? "输入有误"
+                            : output
+                              ? "处理完成"
+                              : "等待处理",
+                      )}
                     </span>
-                    <span>浏览器本地计算</span>
+                    <span>{tr("浏览器本地计算")}</span>
                   </div>
                 </section>
               </div>
               <div className="notice" role="status">
-                {notice}
+                {tr(notice)}
               </div>
               <section className="instructions">
-                <h2>使用说明</h2>
+                <h2>{tr("使用说明")}</h2>
                 {codeLanguage && (
                   <p>
-                    Tab 缩进，Shift + Tab 取消缩进；按 Esc 后再按 Tab
-                    可离开编辑器。Ctrl / ⌘ + F 查找，Ctrl / ⌘ + Z 撤销编辑。
+                    {tr(
+                      "Tab 缩进，Shift + Tab 取消缩进；按 Esc 后再按 Tab 可离开编辑器。Ctrl / ⌘ + F 查找，Ctrl / ⌘ + Z 撤销编辑。",
+                    )}
                   </p>
                 )}
-                <p>{current.hint}</p>
+                <p>{tr(current.hint)}</p>
                 <p>
-                  {current.id === "cron"
-                    ? "选择表达式模式和时区，输入表达式或使用快捷模板，再计算未来 5 次执行时间。搜索范围为未来 5 年。"
-                    : current.id === "timestamp"
-                      ? "选择转换方向、单位和时区。日期使用 YYYY-MM-DD HH:mm:ss 格式，结果同时展示 ISO 8601 和两种时间戳。"
-                      : "粘贴内容或加载示例，选择选项并执行。结果支持复制或下载；错误时请根据提示修正输入。"}
+                  {tr(
+                    current.id === "cron"
+                      ? "选择表达式模式和时区，输入表达式或使用快捷模板，再计算未来 5 次执行时间。搜索范围为未来 5 年。"
+                      : current.id === "timestamp"
+                        ? "选择转换方向、单位和时区。日期使用 YYYY-MM-DD HH:mm:ss 格式，结果同时展示 ISO 8601 和两种时间戳。"
+                        : "粘贴内容或加载示例，选择选项并执行。结果支持复制或下载；错误时请根据提示修正输入。",
+                  )}
                 </p>
                 <details>
-                  <summary>输入内容会被保存吗？</summary>
+                  <summary>{tr("输入内容会被保存吗？")}</summary>
                   <p>
-                    不会自动保存到服务器、浏览器存储或
-                    URL。刷新页面会清除输入。只有当你主动选择“发送到代码画布”时，处理结果才会临时写入当前标签页的
-                    sessionStorage，并在代码画布读取后立即删除。主动下载的文件会保存在你的设备上。启用访问统计时仅记录页面与工具操作，不包含输入、输出或错误原文。
+                    {tr(
+                      "不会自动保存到服务器、浏览器存储或 URL。刷新页面会清除输入。只有当你主动选择“发送到代码画布”时，处理结果才会临时写入当前标签页的 sessionStorage，并在代码画布读取后立即删除。主动下载的文件会保存在你的设备上。启用访问统计时仅记录页面与工具操作，不包含输入、输出或错误原文。",
+                    )}
                   </p>
                 </details>
                 <details>
-                  <summary>为什么有时处理会停止？</summary>
+                  <summary>{tr("为什么有时处理会停止？")}</summary>
                   <p>
-                    单次输入限制为 5 MiB；JSON 最多嵌套 128 层、格式化结果最多约
-                    2000 万字符。处理超过 8 秒会自动终止，请拆分大文本后重试。
+                    {tr(
+                      "单次输入限制为 5 MiB；JSON 最多嵌套 128 层、格式化结果最多约 2000 万字符。处理超过 8 秒会自动终止，请拆分大文本后重试。",
+                    )}
                   </p>
                 </details>
               </section>
@@ -979,16 +1020,16 @@ export function App({ path = "/tools" }: { path?: string }) {
           ) : (
             <section className="not-found">
               <span className="eyebrow">404 / NOT FOUND</span>
-              <h1>这个工具还不存在。</h1>
-              <p>回到工具箱，寻找你需要的工具。</p>
+              <h1>{tr("这个工具还不存在。")}</h1>
+              <p>{tr("回到工具箱，寻找你需要的工具。")}</p>
               <a className="primary" href="/tools">
-                返回工具箱 ↗
+                {tr("返回工具箱 ↗")}
               </a>
             </section>
           )}
           <footer>
             <span>© {new Date().getFullYear()} Wind DevTools</span>
-            <span>简单 · 免费 · 隐私友好</span>
+            <span>{tr("简单 · 免费 · 隐私友好")}</span>
             <span>
               Made for your flow. <i>↗</i>
             </span>

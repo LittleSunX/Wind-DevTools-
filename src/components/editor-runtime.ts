@@ -1,3 +1,4 @@
+import { tr } from "../i18n";
 import { Compartment, EditorState } from "@codemirror/state";
 import {
   EditorView,
@@ -27,6 +28,7 @@ import { tags } from "@lezer/highlight";
 
 export interface EditorOptions {
   id: string;
+  locale?: string;
   label: string;
   value: string;
   language: "json" | "sql" | "plain";
@@ -89,6 +91,21 @@ export function createEditor(parent: HTMLElement, initial: EditorOptions) {
         })(),
       ),
     ),
+    EditorState.phrases.of({
+      Find: tr("查找"),
+      Replace: tr("替换"),
+      next: tr("下一个"),
+      previous: tr("上一个"),
+      all: tr("全部"),
+      "match case": tr("区分大小写"),
+      "by word": tr("全字匹配"),
+      regexp: tr("正则表达式"),
+      replace: tr("替换"),
+      "replace all": tr("全部替换"),
+      close: tr("关闭"),
+      "Go to line": tr("跳转到行"),
+      go: tr("跳转"),
+    }),
     indentUnit.of(" ".repeat(Number(o.indent) || 2)),
     EditorState.tabSize.of(Number(o.indent) || 2),
     EditorState.readOnly.of(!!o.readOnly),
@@ -131,6 +148,8 @@ export function createEditor(parent: HTMLElement, initial: EditorOptions) {
   const key = (o: EditorOptions) =>
     JSON.stringify([
       o.language,
+      o.locale,
+      o.label,
       o.dialect,
       o.indent,
       o.readOnly,

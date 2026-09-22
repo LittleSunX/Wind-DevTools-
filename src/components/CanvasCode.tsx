@@ -1,3 +1,4 @@
+import { tr, useLocale } from "../i18n/react";
 import { useRef, useState, type CSSProperties } from "react";
 import { splitSegments, type Segment } from "../utils/code-image";
 
@@ -25,6 +26,7 @@ export default function CanvasCode({
   readOnly: boolean;
   onChange: (code: string) => void;
 }) {
+  useLocale();
   const input = useRef<HTMLTextAreaElement>(null);
   const [find, setFind] = useState(false);
   const [query, setQuery] = useState("");
@@ -91,7 +93,7 @@ export default function CanvasCode({
         id="shot-code"
         className="canvas-input"
         data-export-ignore
-        aria-label="代码"
+        aria-label={tr("代码")}
         value={code}
         onChange={(event) =>
           onChange(event.target.value.replace(/\r\n?/g, "\n"))
@@ -132,7 +134,7 @@ export default function CanvasCode({
       />
       {!code && (
         <span className="canvas-placeholder" data-export-ignore>
-          在这里输入或粘贴代码…
+          {tr("在这里输入或粘贴代码…")}
         </span>
       )}
       {find && (
@@ -140,11 +142,11 @@ export default function CanvasCode({
           className="canvas-find"
           data-export-ignore
           role="search"
-          aria-label="查找代码"
+          aria-label={tr("查找代码")}
         >
           <input
             autoFocus
-            aria-label="查找内容"
+            aria-label={tr("查找内容")}
             value={query}
             onChange={(event) => {
               setQuery(event.target.value);
@@ -159,11 +161,11 @@ export default function CanvasCode({
             }}
           />
           <button type="button" onClick={search}>
-            下一个
+            {tr("下一个")}
           </button>
           <button
             type="button"
-            aria-label="关闭查找"
+            aria-label={tr("关闭查找")}
             onClick={() => {
               setFind(false);
               input.current?.focus();
@@ -171,7 +173,7 @@ export default function CanvasCode({
           >
             ×
           </button>
-          {message && <span role="status">{message}</span>}
+          {message && <span role="status">{tr(message)}</span>}
         </div>
       )}
     </div>

@@ -1,3 +1,4 @@
+import { tr, useLocale } from "../i18n/react";
 import {
   useEffect,
   useId,
@@ -21,6 +22,7 @@ export default function CanvasPopover({
   alignEnd?: boolean;
   triggerRef?: RefObject<HTMLButtonElement | null>;
 }) {
+  useLocale();
   const id = useId();
   const internalTrigger = useRef<HTMLButtonElement>(null);
   const trigger = triggerRef ?? internalTrigger;
@@ -44,14 +46,14 @@ export default function CanvasPopover({
         disabled={disabled}
         aria-haspopup="dialog"
       >
-        {label} <span aria-hidden="true">⌄</span>
+        {tr(label)} <span aria-hidden="true">⌄</span>
       </button>
       <div
         ref={panel}
         id={id}
         popover="auto"
         role="dialog"
-        aria-label={title}
+        aria-label={tr(title)}
         className="shot-popover"
         onBeforeToggle={(event) => {
           if (event.newState !== "open" || !panel.current || !trigger.current)
@@ -79,13 +81,13 @@ export default function CanvasPopover({
         }}
       >
         <div className="shot-popover-heading">
-          <strong>{title}</strong>
+          <strong>{tr(title)}</strong>
           <button
-            aria-label={`关闭${title}`}
+            aria-label={tr("关闭{{name}}", { name: tr(title) })}
             popoverTarget={id}
             popoverTargetAction="hide"
           >
-            关闭
+            {tr("关闭")}
           </button>
         </div>
         {children}

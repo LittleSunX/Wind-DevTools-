@@ -1,3 +1,4 @@
+import { MessageError, tr } from "../i18n";
 import { CronExpressionParser } from "cron-parser";
 import type { Options } from "./shared";
 import { renderDate } from "./date";
@@ -76,10 +77,16 @@ export function cronTool(input: string, options: Options, now = new Date()) {
       error instanceof Error &&
       error.message === "Invalid explicit day of month definition"
     )
-      return "指定的月份与日期组合不存在，未来 5 年搜索范围内未找到执行时间。";
-    throw new Error(
-      `Cron 表达式无效：${error instanceof Error ? error.message : "请检查字段范围"}`,
-    );
+      return tr(
+        "指定的月份与日期组合不存在，未来 5 年搜索范围内未找到执行时间。",
+      );
+    throw new MessageError({
+      key: "Cron 表达式无效：{{detail}}",
+      values: {
+        detail:
+          error instanceof Error ? error.message : { key: "请检查字段范围" },
+      },
+    });
   }
   const dates: string[] = [];
   for (let i = 0; i < 5; i++) {
@@ -100,8 +107,8 @@ export function cronTool(input: string, options: Options, now = new Date()) {
     .split(/\s+/)
     .map(
       (v, i) =>
-        `${labels[i]}：${v === "*" ? "每个值" : v === "?" ? "不指定" : v.startsWith("*/") ? "每 " + v.slice(2) + " 个单位" : v}`,
+        `${tr(labels[i])}：${v === "*" ? tr("每个值") : v === "?" ? tr("不指定") : v.startsWith("*/") ? tr("每 {{step}} 个单位", { step: v.slice(2) }) : v}`,
     )
     .join(" · ");
-  return `${mode === "linux" ? "Linux · 5 字段" : "Quartz · 6 字段"}\n${desc}\n\n计算基准：${now.toISOString()}\n时区：${zone}\n\n未来执行时间\n${dates.length ? dates.map((d, i) => `${i + 1}. ${d}`).join("\n") : "未来 5 年搜索范围内未找到执行时间。"}${dates.length > 0 && dates.length < 5 ? "\n搜索范围内不足 5 次。" : ""}${zone !== "UTC" ? "\n\n本地时区可能受夏令时影响。" : ""}`;
+  return `${mode === "linux" ? tr("Linux · 5 字段") : tr("Quartz · 6 字段")}\n${desc}\n\n${tr("计算基准")}：${now.toISOString()}\n${tr("时区")}：${zone}\n\n${tr("未来执行时间")}\n${dates.length ? dates.map((d, i) => `${i + 1}. ${d}`).join("\n") : tr("未来 5 年搜索范围内未找到执行时间。")}${dates.length > 0 && dates.length < 5 ? tr("\n搜索范围内不足 5 次。") : ""}${zone !== "UTC" ? tr("\n\n本地时区可能受夏令时影响。") : ""}`;
 }

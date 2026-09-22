@@ -1,3 +1,4 @@
+import { tr, useLocale } from "../i18n/react";
 import { useMemo, useState } from "react";
 import { diffLines, formatUnifiedDiff } from "../utils/diff";
 import { trackTool } from "../analytics";
@@ -16,6 +17,7 @@ const rightExample = `function greet(name) {
 console.log(greet("Wind"));`;
 
 export default function DiffTool() {
+  useLocale();
   const [left, setLeft] = useState("");
   const [right, setRight] = useState("");
   const [notice, setNotice] = useState("");
@@ -55,26 +57,27 @@ export default function DiffTool() {
   return (
     <>
       <div className="breadcrumb">
-        <a href="/tools">工具箱</a>
-        <span>/</span>文本 Diff
+        <a href="/tools">{tr("工具箱")}</a>
+        <span>/</span>
+        {tr("文本 Diff")}
       </div>
       <section className="tool-heading">
         <div>
-          <div className="eyebrow">文本处理 / DIFF</div>
-          <h1>文本 Diff</h1>
-          <p>并排比较两段文本，快速定位新增、删除和未变化的行。</p>
+          <div className="eyebrow">{tr("文本处理 / DIFF")}</div>
+          <h1>{tr("文本 Diff")}</h1>
+          <p>{tr("并排比较两段文本，快速定位新增、删除和未变化的行。")}</p>
         </div>
         <span className="tool-icon" aria-hidden="true">
           ±
         </span>
       </section>
       <div className="privacy-banner">
-        <span>⌑</span> 比较只在当前浏览器完成，不上传文本内容。
+        <span>⌑</span> {tr("比较只在当前浏览器完成，不上传文本内容。")}
         <span className="local-badge">LOCAL ONLY</span>
       </div>
 
       <div className="diff-actions">
-        <button onClick={loadExample}>加载示例</button>
+        <button onClick={loadExample}>{tr("加载示例")}</button>
         <button
           onClick={() => {
             setLeft("");
@@ -82,13 +85,13 @@ export default function DiffTool() {
             setNotice("");
           }}
         >
-          清空
+          {tr("清空")}
         </button>
         <span>
-          {added} 行新增 · {removed} 行删除
+          {tr("新增 {{added}} 行 · 删除 {{removed}} 行", { added, removed })}
         </span>
         <button disabled={!lines.length} onClick={copyDiff}>
-          复制统一 Diff
+          {tr("复制统一 Diff")}
         </button>
       </div>
 
@@ -96,7 +99,7 @@ export default function DiffTool() {
         <section className="editor-panel">
           <div className="editor-header">
             <label htmlFor="diff-left">
-              原始文本 <span>BEFORE</span>
+              {tr("原始文本")} <span>BEFORE</span>
             </label>
           </div>
           <textarea
@@ -104,17 +107,21 @@ export default function DiffTool() {
             spellCheck={false}
             value={left}
             onChange={(event) => setLeft(event.target.value)}
-            placeholder="粘贴原始文本…"
+            placeholder={tr("粘贴原始文本…")}
           />
           <div className="editor-footer">
-            <span>{left.length.toLocaleString()} 字符</span>
-            <span>{left ? left.split(/\r\n|\r|\n/).length : 0} 行</span>
+            <span>{tr("{{count}} 字符", { count: left.length })}</span>
+            <span>
+              {tr("{{count}} 行", {
+                count: left ? left.split(/\r\n|\r|\n/).length : 0,
+              })}
+            </span>
           </div>
         </section>
         <section className="editor-panel">
           <div className="editor-header">
             <label htmlFor="diff-right">
-              修改后文本 <span>AFTER</span>
+              {tr("修改后文本")} <span>AFTER</span>
             </label>
           </div>
           <textarea
@@ -122,29 +129,33 @@ export default function DiffTool() {
             spellCheck={false}
             value={right}
             onChange={(event) => setRight(event.target.value)}
-            placeholder="粘贴修改后的文本…"
+            placeholder={tr("粘贴修改后的文本…")}
           />
           <div className="editor-footer">
-            <span>{right.length.toLocaleString()} 字符</span>
-            <span>{right ? right.split(/\r\n|\r|\n/).length : 0} 行</span>
+            <span>{tr("{{count}} 字符", { count: right.length })}</span>
+            <span>
+              {tr("{{count}} 行", {
+                count: right ? right.split(/\r\n|\r|\n/).length : 0,
+              })}
+            </span>
           </div>
         </section>
       </div>
 
       {error && (
         <div className="error-box" role="alert">
-          {error}
+          {tr(error)}
         </div>
       )}
 
-      <section className="diff-result" aria-label="Diff 结果">
+      <section className="diff-result" aria-label={tr("Diff 结果")}>
         <div className="diff-result-header">
-          <strong>差异结果</strong>
-          <span>绿色新增 · 红色删除</span>
+          <strong>{tr("差异结果")}</strong>
+          <span>{tr("绿色新增 · 红色删除")}</span>
         </div>
         {!lines.length && !error ? (
           <div className="diff-empty">
-            输入两侧文本后，这里会实时显示行级差异。
+            {tr("输入两侧文本后，这里会实时显示行级差异。")}
           </div>
         ) : (
           <div className="diff-lines">
@@ -166,13 +177,14 @@ export default function DiffTool() {
         )}
       </section>
       <div className="notice" role="status">
-        {notice}
+        {tr(notice)}
       </div>
       <section className="instructions">
-        <h2>使用说明</h2>
+        <h2>{tr("使用说明")}</h2>
         <p>
-          按行比较文本，适合代码、配置、SQL、日志和普通文本。单侧最多 1,200
-          行，避免浏览器在超大文本比较时占用过多内存。
+          {tr(
+            "按行比较文本，适合代码、配置、SQL、日志和普通文本。单侧最多 1,200 行，避免浏览器在超大文本比较时占用过多内存。",
+          )}
         </p>
       </section>
     </>

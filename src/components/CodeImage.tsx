@@ -1,3 +1,5 @@
+import type { Message } from "../i18n";
+import { tr, useLocale } from "../i18n/react";
 import {
   useEffect,
   useLayoutEffect,
@@ -29,6 +31,7 @@ import {
 } from "../utils/code-image";
 
 export default function CodeImage() {
+  useLocale();
   const [code, setCode] = useState(sampleCode);
   const [language, setLanguage] = useState("typescript");
   const [options, setOptions] = useState<ImageOptions>(defaults);
@@ -41,7 +44,7 @@ export default function CodeImage() {
   const [highlightError, setHighlightError] = useState("");
   const [fontError, setFontError] = useState("");
   const [fontReady, setFontReady] = useState("");
-  const [notice, setNotice] = useState("");
+  const [notice, setNotice] = useState<Message>("");
   const [exporting, setExporting] = useState(false);
   const [replace, setReplace] = useState(false);
   const [languageSearch, setLanguageSearch] = useState("");
@@ -307,7 +310,10 @@ export default function CodeImage() {
         ...previous,
         title: file.name.slice(0, 80),
       }));
-      setNotice(`已导入 ${file.name}，内容仅在浏览器中读取。`);
+      setNotice({
+        key: "已导入 {{name}}，内容仅在浏览器中读取。",
+        values: { name: file.name },
+      });
     } catch (error) {
       setNotice(
         error instanceof Error ? error.message : "文件读取失败，请重试。",
@@ -321,9 +327,9 @@ export default function CodeImage() {
     change: (v: string) => void,
   ) => (
     <label className="shot-field">
-      {label}
+      {tr(label)}
       <select
-        aria-label={label}
+        aria-label={tr(label)}
         value={value}
         onChange={(e) => change(e.target.value)}
         disabled={exporting}
@@ -334,7 +340,7 @@ export default function CodeImage() {
             value={v}
             disabled={label === "风格" && v === "custom"}
           >
-            {l}
+            {tr(l)}
           </option>
         ))}
       </select>
@@ -343,28 +349,34 @@ export default function CodeImage() {
   return (
     <>
       <div className="breadcrumb">
-        <a href="/tools">工具箱</a>
-        <span>/</span>代码画布
+        <a href="/tools">{tr("工具箱")}</a>
+        <span>/</span>
+        {tr("代码画布")}
       </div>
       <section className="tool-heading canvas-heading">
         <div>
-          <div className="eyebrow">创作与分享 / CODE CANVAS</div>
-          <h1>代码画布</h1>
-          <p>直接在画布中写下代码，把眼前的作品带走。</p>
+          <div className="eyebrow">{tr("创作与分享 / CODE CANVAS")}</div>
+          <h1>{tr("代码画布")}</h1>
+          <p>{tr("直接在画布中写下代码，把眼前的作品带走。")}</p>
         </div>
         <span className="shot-badge">LOCAL · PNG / SVG</span>
       </section>
-      <div className="shot-toolbar canvas-toolbar" aria-label="画布工具栏">
+      <div
+        className="shot-toolbar canvas-toolbar"
+        aria-label={tr("画布工具栏")}
+      >
         <CanvasPopover
-          label={`语言 · ${languages.find(([id]) => id === language)?.[1]}`}
-          title="选择语言"
+          label={tr("语言 · {{name}}", {
+            name: tr(languages.find(([id]) => id === language)?.[1]),
+          })}
+          title={tr("选择语言")}
           disabled={exporting}
         >
           <div className="shot-language-search">
             <input
               type="search"
-              aria-label="搜索语言"
-              placeholder="搜索语言，例如 Java、TSX"
+              aria-label={tr("搜索语言")}
+              placeholder={tr("搜索语言，例如 Java、TSX")}
               value={languageSearch}
               onChange={(e) => setLanguageSearch(e.target.value)}
             />
@@ -372,13 +384,13 @@ export default function CodeImage() {
           <div className="shot-language-list">
             {languageGroups.map((group) => {
               const items = group.items.filter(([id, name]) =>
-                `${id} ${name}`
+                `${id} ${name} ${tr(name)}`
                   .toLowerCase()
                   .includes(languageSearch.trim().toLowerCase()),
               );
               return items.length ? (
                 <div key={group.label}>
-                  <h3>{group.label}</h3>
+                  <h3>{tr(group.label)}</h3>
                   {items.map(([id, name]) => (
                     <button
                       key={id}
@@ -392,7 +404,7 @@ export default function CodeImage() {
                           ?.hidePopover();
                       }}
                     >
-                      {name}
+                      {tr(name)}
                       {language === id && <span aria-hidden="true"> ✓</span>}
                     </button>
                   ))}
@@ -400,10 +412,10 @@ export default function CodeImage() {
               ) : null;
             })}
             {!languages.some(([id, name]) =>
-              `${id} ${name}`
+              `${id} ${name} ${tr(name)}`
                 .toLowerCase()
                 .includes(languageSearch.trim().toLowerCase()),
-            ) && <p>未找到匹配语言。</p>}
+            ) && <p>{tr("未找到匹配语言。")}</p>}
           </div>
         </CanvasPopover>
         {select(
@@ -450,8 +462,8 @@ export default function CodeImage() {
         )}
         <CanvasPopover
           alignEnd
-          label="外观设置"
-          title="外观设置"
+          label={tr("外观设置")}
+          title={tr("外观设置")}
           disabled={exporting}
         >
           <CanvasSettings
@@ -476,7 +488,9 @@ export default function CodeImage() {
       </div>
       <div className="canvas-utility">
         <span id="canvas-help">
-          点击代码直接编辑 · Tab 缩进 · Esc 后 Tab 离开 · Ctrl / ⌘ + F 查找
+          {tr(
+            "点击代码直接编辑 · Tab 缩进 · Esc 后 Tab 离开 · Ctrl / ⌘ + F 查找",
+          )}
         </span>
         <button
           disabled={exporting}
@@ -484,13 +498,13 @@ export default function CodeImage() {
             code ? setReplace(true) : changeCode(sampleForLanguage(language))
           }
         >
-          加载示例
+          {tr("加载示例")}
         </button>
         <button disabled={exporting} onClick={() => changeCode("")}>
-          清空
+          {tr("清空")}
         </button>
         <label className="canvas-file-import">
-          导入文件
+          {tr("导入文件")}
           <input
             type="file"
             disabled={exporting}
@@ -504,17 +518,17 @@ export default function CodeImage() {
       </div>
       {replace && (
         <div className="replace-prompt">
-          用当前语言的示例替换代码？
+          {tr("用当前语言的示例替换代码？")}
           <button onClick={() => changeCode(sampleForLanguage(language))}>
-            替换
+            {tr("替换")}
           </button>
-          <button onClick={() => setReplace(false)}>取消</button>
+          <button onClick={() => setReplace(false)}>{tr("取消")}</button>
         </div>
       )}
       <div
         className={`canvas-stage ${options.background === "transparent" ? "is-transparent" : ""} ${draggingFile ? "is-dragging" : ""}`}
         ref={stage}
-        aria-label="画布工作区"
+        aria-label={tr("画布工作区")}
         aria-busy={exporting}
         onDragEnter={(event) => {
           event.preventDefault();
@@ -605,8 +619,8 @@ export default function CodeImage() {
                     <span aria-hidden="true">{options.title || "\u00a0"}</span>
                     <input
                       data-export-ignore
-                      aria-label="窗口标题"
-                      placeholder="添加标题…"
+                      aria-label={tr("窗口标题")}
+                      placeholder={tr("添加标题…")}
                       value={options.title}
                       maxLength={80}
                       disabled={exporting}
@@ -637,18 +651,18 @@ export default function CodeImage() {
         </div>
       </div>
       <div className="canvas-statusbar">
-        <span>{code.length.toLocaleString()} / 12,000 字符</span>
+        <span>{tr("{{count}} / 12,000 字符", { count: code.length })}</span>
         <span>
           {size.width * options.scale} × {size.height * options.scale} px
         </span>
         <label>
-          画布缩放
+          {tr("画布缩放")}
           <select
-            aria-label="画布缩放"
+            aria-label={tr("画布缩放")}
             value={zoom}
             onChange={(event) => setZoom(event.target.value)}
           >
-            <option value="fit">适应宽度</option>
+            <option value="fit">{tr("适应宽度")}</option>
             <option value="0.5">50%</option>
             <option value="0.75">75%</option>
             <option value="1">100%</option>
@@ -658,24 +672,24 @@ export default function CodeImage() {
       </div>
       {error && (
         <div className="error-box" role="alert">
-          {error}
+          {tr(error)}
         </div>
       )}
       <div className="notice" role="status">
-        {notice || (!error && !canExport ? "正在准备字体与高亮…" : "")}
+        {tr(notice || (!error && !canExport ? "正在准备字体与高亮…" : ""))}
       </div>
       <section className="instructions canvas-instructions">
         <details>
-          <summary>使用说明 · 编辑与导出</summary>
+          <summary>{tr("使用说明 · 编辑与导出")}</summary>
           <p>
-            在画布上直接输入代码、修改标题。可自定义渐变背景、窗口样式、画布比例、起始行号和高亮行；缩放只影响查看比例，导出使用实际尺寸。PNG
-            / SVG 不包含光标、选区和操作控件。支持 28 种语言与格式，以及 1× / 2×
-            / 3× PNG 导出。中文和未覆盖字符使用系统字体回退。
+            {tr(
+              "在画布上直接输入代码、修改标题。可自定义渐变背景、窗口样式、画布比例、起始行号和高亮行；缩放只影响查看比例，导出使用实际尺寸。PNG / SVG 不包含光标、选区和操作控件。支持 28 种语言与格式，以及 1× / 2× / 3× PNG 导出。中文和未覆盖字符使用系统字体回退。",
+            )}
           </p>
           <p>
-            所有内容在浏览器内处理，不执行或上传代码。仅记住外观设置，不保存代码或标题。最多支持
-            12,000 字符、160 行和 1600
-            万导出像素；长行可在外观设置中指定宽度并自动换行。
+            {tr(
+              "所有内容在浏览器内处理，不执行或上传代码。仅记住外观设置，不保存代码或标题。最多支持 12,000 字符、160 行和 1600 万导出像素；长行可在外观设置中指定宽度并自动换行。",
+            )}
           </p>
         </details>
       </section>
