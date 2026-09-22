@@ -3,8 +3,9 @@ import { renderToString } from "react-dom/server";
 import { createElement } from "react";
 import { App } from "../src/App";
 import { tools } from "../src/catalog";
-import { i18n, tr, type Language } from "../src/i18n";
+import { i18n, type Language } from "../src/i18n";
 import { alternatePaths, localizedPath } from "../src/i18n/routing";
+import { pageMetadata } from "../src/seo";
 import { loadEnv } from "vite";
 
 const template = await readFile("dist/index.html", "utf8");
@@ -22,38 +23,6 @@ const canonicalRoutes = [
   { path: "/tools", tool: undefined },
   ...tools.map((tool) => ({ path: `/tools/${tool.id}`, tool })),
 ];
-
-function metadata(
-  path: string,
-  language: Language,
-  tool?: (typeof tools)[number],
-) {
-  if (tool)
-    return {
-      title:
-        language === "en"
-          ? `${tr(tool.name)} - Free Online Developer Tool | Wind DevTools`
-          : `${tr(tool.name)} - 免费在线开发工具 | Wind DevTools`,
-      description:
-        language === "en"
-          ? `${tr(tool.description)} Processed locally in your browser.`
-          : `${tr(tool.description)} 数据仅在浏览器本地处理。`,
-    };
-  return language === "en"
-    ? {
-        title: "Developer Toolbox | Wind DevTools",
-        description:
-          "Free developer tools for JSON, timestamps, JWT, SQL, Cron, text and code images. No sign-up; processing stays in your browser.",
-      }
-    : {
-        title:
-          path === "/tools"
-            ? "开发者工具箱 | Wind DevTools"
-            : "Wind DevTools — 开发者的轻量工具箱",
-        description:
-          "JSON 格式化、时间戳转换、JWT 解析、SQL 格式化、Cron 与代码画布工具，免费且在浏览器本地处理。",
-      };
-}
 
 function seoLinks(path: string, publicPath: string) {
   if (!origin) return "";
@@ -82,7 +51,7 @@ async function renderPage({
   noindex?: boolean;
 }) {
   await i18n.changeLanguage(language);
-  const meta = metadata(routePath, language, tool);
+  const meta = pageMetadata({ language, tool, isHome: routePath === "/tools" });
   let html = template
     .replace(
       /<html lang="[^"]*">/,
