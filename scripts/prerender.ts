@@ -3,7 +3,10 @@ import { renderToString } from "react-dom/server";
 import { createElement } from "react";
 import { App } from "../src/App";
 import { tools } from "../src/catalog";
+import { i18n, tr, type Language } from "../src/i18n";
+import { alternatePaths, localizedPath } from "../src/i18n/routing";
 import { loadEnv } from "vite";
+
 const template = await readFile("dist/index.html", "utf8");
 const raw =
   process.env.SITE_URL || loadEnv("production", process.cwd(), "").SITE_URL;
@@ -14,74 +17,161 @@ if (raw) {
     throw new Error("SITE_URL must be an HTTP(S) origin");
   origin = url.origin;
 }
-const routes = [
-  {
-    path: "/",
-    title: "Wind DevTools — 开发者的轻量工具箱",
-    description:
-      "免费、无需登录的开发者工具箱。JSON、时间戳、JWT、SQL、Cron 和代码画布，数据在浏览器本地处理。",
-  },
-  {
-    path: "/tools",
-    title: "开发者工具箱 | Wind DevTools",
-    description:
-      "JSON 格式化、时间戳转换、JWT 解析、SQL 格式化、Cron 与代码画布工具，免费且在浏览器本地处理。",
-  },
-  ...tools.map((t) => ({
-    path: `/tools/${t.id}`,
-    title: `${t.name} - 免费在线开发工具 | Wind DevTools`,
-    description: t.description + " 数据仅在浏览器本地处理。",
-  })),
-  {
-    path: "/404",
-    title: "页面不存在 | Wind DevTools",
-    description: "当前页面不存在，请返回工具箱。",
-  },
+
+const canonicalRoutes = [
+  { path: "/tools", tool: undefined },
+  ...tools.map((tool) => ({ path: `/tools/${tool.id}`, tool })),
 ];
-for (const route of routes) {
+
+function metadata(
+  path: string,
+  language: Language,
+  tool?: (typeof tools)[number],
+) {
+  if (tool)
+    return {
+      title:
+        language === "en"
+          ? `${tr(tool.name)} - Free Online Developer Tool | Wind DevTools`
+          : `${tr(tool.name)} - 免费在线开发工具 | Wind DevTools`,
+      description:
+        language === "en"
+          ? `${tr(tool.description)} Processed locally in your browser.`
+          : `${tr(tool.description)} 数据仅在浏览器本地处理。`,
+    };
+  return language === "en"
+    ? {
+        title: "Developer Toolbox | Wind DevTools",
+        description:
+          "Free developer tools for JSON, timestamps, JWT, SQL, Cron, text and code images. No sign-up; processing stays in your browser.",
+      }
+    : {
+        title:
+          path === "/tools"
+            ? "开发者工具箱 | Wind DevTools"
+            : "Wind DevTools — 开发者的轻量工具箱",
+        description:
+          "JSON 格式化、时间戳转换、JWT 解析、SQL 格式化、Cron 与代码画布工具，免费且在浏览器本地处理。",
+      };
+}
+
+function seoLinks(path: string, publicPath: string) {
+  if (!origin) return "";
+  const alternatives = alternatePaths(path);
+  return [
+    `<link rel="canonical" href="${origin}${publicPath}"/>`,
+    `<link rel="alternate" hreflang="zh-CN" href="${origin}${alternatives.zh}"/>`,
+    `<link rel="alternate" hreflang="en" href="${origin}${alternatives.en}"/>`,
+    `<link rel="alternate" hreflang="x-default" href="${origin}${alternatives.zh}"/>`,
+  ].join("");
+}
+
+async function renderPage({
+  publicPath,
+  routePath,
+  language,
+  canonicalPath = publicPath,
+  tool,
+  noindex = false,
+}: {
+  publicPath: string;
+  routePath: string;
+  language: Language;
+  canonicalPath?: string;
+  tool?: (typeof tools)[number];
+  noindex?: boolean;
+}) {
+  await i18n.changeLanguage(language);
+  const meta = metadata(routePath, language, tool);
   let html = template
     .replace(
-      "<!--app-html-->",
-      renderToString(createElement(App, { path: route.path })),
+      /<html lang="[^"]*">/,
+      `<html lang="${language === "zh" ? "zh-CN" : "en"}">`,
     )
-    .replace(/<title>.*?<\/title>/, `<title>${route.title}</title>`)
+    .replace(
+      "<!--app-html-->",
+      renderToString(createElement(App, { path: publicPath })),
+    )
+    .replace(/<title>.*?<\/title>/, `<title>${meta.title}</title>`)
     .replace(
       /<meta\s+name="description"\s+content="[^"]*"\s*\/>/,
-      `<meta name="description" content="${route.description}"/>`,
+      `<meta name="description" content="${meta.description}"/>`,
     );
-  if (origin && route.path !== "/404")
-    html = html.replace(
-      "</head>",
-      `<link rel="canonical" href="${origin}${route.path === "/" ? "/tools" : route.path}"/></head>`,
-    );
-  if (route.path === "/404")
+
+  if (noindex) {
     html = html.replace(
       "</head>",
       '<meta name="robots" content="noindex"/></head>',
     );
+  } else if (origin) {
+    html = html.replace(
+      "</head>",
+      `${seoLinks(routePath, canonicalPath)}</head>`,
+    );
+  }
+
   const dest =
-    route.path === "/"
+    publicPath === "/"
       ? "dist/index.html"
-      : route.path === "/404"
+      : publicPath === "/404"
         ? "dist/404.html"
-        : `dist${route.path}/index.html`;
+        : `dist${publicPath}/index.html`;
   await mkdir(dest.slice(0, dest.lastIndexOf("/")), { recursive: true });
   await writeFile(dest, html);
 }
+
+for (const language of ["zh", "en"] as const) {
+  for (const route of canonicalRoutes) {
+    const publicPath = localizedPath(route.path, language);
+    await renderPage({
+      publicPath,
+      routePath: route.path,
+      language,
+      tool: route.tool,
+    });
+  }
+}
+
+await renderPage({
+  publicPath: "/",
+  routePath: "/tools",
+  language: "zh",
+  canonicalPath: "/tools",
+});
+await renderPage({
+  publicPath: "/en",
+  routePath: "/tools",
+  language: "en",
+  canonicalPath: "/en/tools",
+});
+await renderPage({
+  publicPath: "/404",
+  routePath: "/404",
+  language: "zh",
+  noindex: true,
+});
+
 await writeFile(
   "dist/robots.txt",
   origin
     ? `User-agent: *\nAllow: /\nSitemap: ${origin}/sitemap.xml\n`
     : "User-agent: *\nDisallow: /\n",
 );
-if (origin)
+
+if (origin) {
+  const urls = canonicalRoutes.flatMap((route) =>
+    (["zh", "en"] as const).map((language) => {
+      const loc = localizedPath(route.path, language);
+      const alternatives = alternatePaths(route.path);
+      return `<url><loc>${origin}${loc}</loc><xhtml:link rel="alternate" hreflang="zh-CN" href="${origin}${alternatives.zh}"/><xhtml:link rel="alternate" hreflang="en" href="${origin}${alternatives.en}"/><xhtml:link rel="alternate" hreflang="x-default" href="${origin}${alternatives.zh}"/></url>`;
+    }),
+  );
   await writeFile(
     "dist/sitemap.xml",
-    `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${routes
-      .filter((r) => !["/", "/404"].includes(r.path))
-      .map((r) => `<url><loc>${origin}${r.path}</loc></url>`)
-      .join("")}</urlset>`,
+    `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">${urls.join("")}</urlset>`,
   );
+}
+
 console.log(
-  `Pre-rendered ${routes.length} pages. ${origin ? "Canonical and sitemap enabled." : "Set SITE_URL for production indexing."}`,
+  `Pre-rendered ${canonicalRoutes.length * 2 + 3} pages. ${origin ? "Bilingual canonical, hreflang and sitemap enabled." : "Set SITE_URL for production indexing."}`,
 );
