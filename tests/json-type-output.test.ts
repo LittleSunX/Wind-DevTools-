@@ -87,6 +87,49 @@ describe("generated type validity", () => {
     typescriptCompiles(output, `const fixture: Root = ${input}; void fixture;`);
   });
 
+  it.each([
+    { items: [{ a: 1 }, [{ b: true }]] },
+    { items: [[{ b: true }], { a: 1 }] },
+    { items: [{ a: 1 }, [[{ b: true }]], [{ c: "nested" }]] },
+  ])("preserves objects at distinct array depths: %j", (value) => {
+    const input = JSON.stringify(value);
+    const output = jsonTypeTool(input, { target: "typescript" });
+    expect(output).toContain('"a": number;');
+    expect(output).toContain('"b": boolean;');
+    typescriptCompiles(output, `const fixture: Root = ${input}; void fixture;`);
+  });
+
+  it("merges wide object arrays within the tool processing deadline", () => {
+    const input = JSON.stringify(
+      Array.from({ length: 16000 }, (_, index) => ({
+        [`field${index}`]: index,
+      })),
+    );
+    const start = performance.now();
+    const output = jsonTypeTool(input, { target: "typescript" });
+    const elapsed = performance.now() - start;
+    expect(output.match(/\?: number;/g)).toHaveLength(16000);
+    expect(elapsed).toBeLessThan(8000);
+  }, 10000);
+
+  javaIt.each(["List", "Object", "String", "Long", "Double", "Boolean"])(
+    "compiles when the root class shadows %s",
+    (rootName) => {
+      const input = JSON.stringify({
+        values: [1],
+        text: "Wind",
+        integer: 1,
+        decimal: 1.5,
+        enabled: true,
+        empty: null,
+        mixed: [1, "two"],
+        unknown: [],
+      });
+      const output = jsonTypeTool(input, { target: "java", rootName });
+      javaCompiles(output, rootName);
+    },
+  );
+
   javaIt(
     "makes legal, unique Java names and preserves fields in object arrays",
     () => {

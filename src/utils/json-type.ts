@@ -45,6 +45,7 @@ function shapeOf(value: JsonValue): Shape {
   return { kind: typeof value as "string" | "boolean" };
 }
 
+// Shapes are owned by this inference pass; merge consumes its left accumulator.
 function merge(left: Shape, right: Shape): Shape {
   if (left.kind === "union" || right.kind === "union") {
     const variants = [
@@ -74,7 +75,7 @@ function merge(left: Shape, right: Shape): Shape {
           : (left.element ?? right.element),
     };
   if (left.kind === "object" && right.kind === "object") {
-    const fields = new Map(left.fields);
+    const fields = left.fields;
     for (const [key, field] of right.fields) {
       const previous = fields.get(key);
       fields.set(
@@ -108,6 +109,11 @@ function titleCase(value: string) {
 class Names {
   private byPath = new Map<string, string>();
   private used = new Set<string>();
+  javaType(name: string) {
+    return this.byPath.get("$root") === name
+      ? `${name === "List" ? "java.util" : "java.lang"}.${name}`
+      : name;
+  }
   get(path: string, requested: string) {
     const existing = this.byPath.get(path);
     if (existing) return existing;
@@ -143,7 +149,13 @@ function typescript(
       return shape.kind;
     case "array": {
       if (!shape.element) return "unknown[]";
-      const member = typescript(shape.element, path, name, names, defs);
+      const member = typescript(
+        shape.element,
+        `${path}/element`,
+        name,
+        names,
+        defs,
+      );
       return `${shape.element.kind === "union" ? `(${member})` : member}[]`;
     }
     case "union": {
@@ -191,20 +203,20 @@ function java(
 ): string {
   switch (shape.kind) {
     case "null":
-      return "Object";
+      return names.javaType("Object");
     case "boolean":
-      return "Boolean";
+      return names.javaType("Boolean");
     case "number":
-      return shape.integer ? "Long" : "Double";
+      return names.javaType(shape.integer ? "Long" : "Double");
     case "string":
-      return "String";
+      return names.javaType("String");
     case "array":
-      return `List<${shape.element ? java(shape.element, path, name, names, defs) : "Object"}>`;
+      return `${names.javaType("List")}<${shape.element ? java(shape.element, `${path}/element`, name, names, defs) : names.javaType("Object")}>`;
     case "union": {
       const meaningful = shape.variants.filter((item) => item.kind !== "null");
       return meaningful.length === 1
         ? java(meaningful[0], path, name, names, defs)
-        : "Object";
+        : names.javaType("Object");
     }
     case "object": {
       const id = names.get(path, name);
@@ -254,7 +266,7 @@ export function jsonTypeTool(input: string, options: JsonTypeOptions = {}) {
         `public class ${rootName} {\n    private ${rootType} value;\n}`,
       );
     const root = defs.get(rootName)!;
-    return `import java.util.List;\n\n${[root, ...[...defs].filter(([name]) => name !== rootName).map(([, body]) => body)].join("\n\n")}`;
+    return `${rootName === "List" ? "" : "import java.util.List;\n\n"}${[root, ...[...defs].filter(([name]) => name !== rootName).map(([, body]) => body)].join("\n\n")}`;
   }
   const names = new Names(),
     defs = new Map<string, string>();
