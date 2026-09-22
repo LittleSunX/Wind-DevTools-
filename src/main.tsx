@@ -13,21 +13,24 @@ function readSavedLanguage() {
   }
 }
 
-const requested = parseLocalizedPath(window.location.pathname);
-if (window.location.pathname === "/") {
-  const preferred = resolveLanguage(readSavedLanguage(), navigator.languages);
-  if (preferred === "en") {
-    window.location.replace(
-      `/en/tools${window.location.search}${window.location.hash}`,
-    );
+async function bootstrap() {
+  const requested = parseLocalizedPath(window.location.pathname);
+  if (window.location.pathname === "/") {
+    const preferred = resolveLanguage(readSavedLanguage(), navigator.languages);
+    if (preferred === "en") {
+      window.location.replace(
+        `/en/tools${window.location.search}${window.location.hash}`,
+      );
+      return;
+    }
+    await i18n.changeLanguage("zh");
   } else {
-    void i18n.changeLanguage("zh");
-    mount();
+    await i18n.changeLanguage(requested.language);
   }
-} else {
-  void i18n.changeLanguage(requested.language);
   mount();
 }
+
+void bootstrap();
 
 function mount() {
   const root = document.getElementById("root")!;
