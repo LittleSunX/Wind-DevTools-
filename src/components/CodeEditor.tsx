@@ -2,9 +2,14 @@ import { tr, useLocale } from "../i18n/react";
 import { useEffect, useRef, useState } from "react";
 import type { createEditor, EditorOptions } from "./editor-runtime";
 
-export default function CodeEditor(props: EditorOptions) {
+export default function CodeEditor(rawProps: EditorOptions) {
   const locale = useLocale();
-  props = { ...props, locale };
+  const props = {
+    ...rawProps,
+    locale,
+    label: tr(rawProps.label),
+    placeholder: tr(rawProps.placeholder),
+  };
   const host = useRef<HTMLDivElement>(null);
   const fallback = useRef<HTMLTextAreaElement>(null);
   const latest = useRef(props);
@@ -43,14 +48,14 @@ export default function CodeEditor(props: EditorOptions) {
         <textarea
           ref={fallback}
           id={props.id}
-          aria-label={tr(props.label)}
+          aria-label={props.label}
           aria-invalid={props.invalid || undefined}
           aria-describedby={props.invalid ? "tool-error" : undefined}
           value={props.value}
           onChange={(e) => props.onChange?.(e.target.value)}
           readOnly={props.readOnly}
           spellCheck={false}
-          placeholder={tr(props.placeholder)}
+          placeholder={props.placeholder}
         />
       )}
       <div className="code-editor-host" ref={host} />

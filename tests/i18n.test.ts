@@ -9,6 +9,7 @@ import {
 import en from "../src/i18n/locales/en.json";
 import zh from "../src/i18n/locales/zh.json";
 import { jsonTool } from "../src/utils/json";
+import { localizedPath, parseLocalizedPath } from "../src/i18n/routing";
 
 afterEach(() => i18n.changeLanguage("zh"));
 describe("internationalization", () => {
@@ -17,6 +18,23 @@ describe("internationalization", () => {
     expect(resolveLanguage("invalid", ["fr-FR", "en-GB"])).toBe("en");
     expect(resolveLanguage(null, ["zh-TW", "en"])).toBe("zh");
     expect(resolveLanguage(null, ["fr"])).toBe("zh");
+  });
+  it("maps stable Chinese routes to English SEO routes", () => {
+    expect(parseLocalizedPath("/tools/json")).toEqual({
+      language: "zh",
+      path: "/tools/json",
+    });
+    expect(parseLocalizedPath("/en/tools/json")).toEqual({
+      language: "en",
+      path: "/tools/json",
+    });
+    expect(parseLocalizedPath("/en")).toEqual({
+      language: "en",
+      path: "/tools",
+    });
+    expect(localizedPath("/tools/json", "zh")).toBe("/tools/json");
+    expect(localizedPath("/tools/json", "en")).toBe("/en/tools/json");
+    expect(localizedPath("/", "en")).toBe("/en/tools");
   });
   it("keeps translation keys and interpolation variables aligned", () => {
     expect(Object.keys(en).sort()).toEqual(Object.keys(zh).sort());

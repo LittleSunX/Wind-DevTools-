@@ -66,7 +66,7 @@ for (const [name, engine] of [
         if (
           !parent ||
           parent.closest(
-            'script, style, textarea, .cm-content, .canvas-artwork, .diff-lines, .language-switcher, [role="alert"], [role="status"]',
+            "script, style, textarea, .cm-content, .canvas-artwork, .diff-lines, .language-switcher",
           )
         )
           continue;
@@ -83,23 +83,35 @@ for (const [name, engine] of [
     );
   };
   try {
-    await page.goto(base + "/tools");
+    await page.goto(base + "/");
+    await expect(page).toHaveURL(/\/en\/tools$/);
+    await page.goto(base + "/en/tools");
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
+    await expect(page).toHaveURL(/\/en\/tools$/);
     await page.getByLabel("Search tools", { exact: true }).fill("timestamp");
     await expect(page.locator(".tool-card")).toHaveCount(1);
     await expect(page.locator(".filters > span")).toHaveText("1 tool");
     await switchTo("zh");
+    await expect(page).toHaveURL(/\/tools$/);
     await expect(page.getByLabel("搜索工具", { exact: true })).toHaveValue(
       "timestamp",
     );
     await page.reload();
     await expect(page.locator(".language-switcher")).toHaveValue("zh");
     await switchTo("en");
+    await expect(page).toHaveURL(/\/en\/tools$/);
     await page.getByRole("button", { name: "Data tools", exact: true }).click();
     const count = await page.locator(".tool-card").count();
     await switchTo("zh");
     await expect(page.locator(".tool-card")).toHaveCount(count);
     await switchTo("en");
+    await page.goto(base + "/en/tools/json");
+    await page.getByRole("button", { name: "Format", exact: true }).click();
+    await expect(page.getByRole("alert")).toHaveText(
+      "Enter some content first.",
+    );
+    await noChineseUI();
+
     for (const tool of [
       "json",
       "timestamp",
@@ -112,18 +124,34 @@ for (const [name, engine] of [
       "text",
       "code-image",
     ]) {
-      await page.goto(`${base}/tools/${tool}`);
+      await page.goto(`${base}/en/tools/${tool}`);
       await expect(page.locator("html")).toHaveAttribute("lang", "en");
       if (tool === "code-image") await canvasReady();
       await noChineseUI();
     }
+    const missing = await page.goto(base + "/en/missing");
+    assert.equal(missing.status(), 404);
+    await page.getByRole("heading", { name: /does not exist/i }).waitFor();
+    await expect(page.locator("html")).toHaveAttribute("lang", "en");
+    await noChineseUI();
+    for (let index = errors.length - 1; index >= 0; index--) {
+      const error = errors[index];
+      if (
+        typeof error === "object" &&
+        (error.page?.endsWith("/en/missing") ||
+          error.location?.url?.endsWith("/en/missing")) &&
+        /404/.test(error.message)
+      )
+        errors.splice(index, 1);
+    }
+
     // Worker-generated explanatory output uses the selected language too.
     for (const [tool, action, expected] of [
       ["timestamp", "Convert", "Timestamp (seconds)"],
       ["jwt", "Decode JWT", "Time information (based on the device clock)"],
       ["cron", "Calculate schedule", "Upcoming runs"],
     ]) {
-      await page.goto(`${base}/tools/${tool}`);
+      await page.goto(`${base}/en/tools/${tool}`);
       await page
         .getByRole("button", { name: "Load example", exact: true })
         .click();
@@ -132,7 +160,7 @@ for (const [name, engine] of [
         new RegExp(expected.replace(/[()]/g, "\\$&")),
       );
     }
-    await page.goto(base + "/tools/code-image");
+    await page.goto(base + "/en/tools/code-image");
     await canvasReady();
     const code = page.getByLabel("Code", { exact: true });
     await code.fill('const greeting = "中文 {{name}}";');
@@ -161,7 +189,7 @@ for (const [name, engine] of [
     await page
       .getByRole("button", { name: "Close Appearance", exact: true })
       .click();
-    await page.goto(base + "/tools/codec");
+    await page.goto(base + "/en/tools/codec");
     const input = page.getByLabel("Input", { exact: true });
     await input.fill("代码画布 {{name}}");
     await page.getByRole("button", { name: "Convert", exact: true }).click();
@@ -205,13 +233,19 @@ for (const [name, engine] of [
       /"中文": 1/,
     );
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
+    await expect(page).toHaveURL(/\/en\/tools\/code-image$/);
     await canvasReady();
+    await noChineseUI();
     for (const width of [375, 800]) {
       await page.setViewportSize({ width, height: 900 });
-      for (const route of ["/tools", "/tools/json", "/tools/code-image"]) {
+      for (const route of [
+        "/en/tools",
+        "/en/tools/json",
+        "/en/tools/code-image",
+      ]) {
         await page.goto(base + route);
         await expect(page.locator("html")).toHaveAttribute("lang", "en");
-        if (route === "/tools/code-image") await canvasReady();
+        if (route === "/en/tools/code-image") await canvasReady();
         assert.ok(
           await page.evaluate(
             () => document.documentElement.scrollWidth <= innerWidth + 1,
@@ -234,7 +268,7 @@ for (const [name, engine] of [
       };
     });
     const other = await blocked.newPage();
-    await other.goto(base + "/tools");
+    await other.goto(base + "/en/tools");
     await expect(other.locator("html")).toHaveAttribute("lang", "en");
     await other.locator(".language-switcher").selectOption("zh");
     await expect(other.locator("html")).toHaveAttribute("lang", "zh-CN");

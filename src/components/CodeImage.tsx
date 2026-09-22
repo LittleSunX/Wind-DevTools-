@@ -1,5 +1,6 @@
 import type { Message } from "../i18n";
 import { tr, useLocale } from "../i18n/react";
+import { localizedPath } from "../i18n/routing";
 import {
   useEffect,
   useLayoutEffect,
@@ -31,7 +32,8 @@ import {
 } from "../utils/code-image";
 
 export default function CodeImage() {
-  useLocale();
+  const locale = useLocale();
+  const toolboxHref = localizedPath("/tools", locale === "en" ? "en" : "zh");
   const [code, setCode] = useState(sampleCode);
   const [language, setLanguage] = useState("typescript");
   const [options, setOptions] = useState<ImageOptions>(defaults);
@@ -349,7 +351,7 @@ export default function CodeImage() {
   return (
     <>
       <div className="breadcrumb">
-        <a href="/tools">{tr("工具箱")}</a>
+        <a href={toolboxHref}>{tr("工具箱")}</a>
         <span>/</span>
         {tr("代码画布")}
       </div>
@@ -366,10 +368,13 @@ export default function CodeImage() {
         aria-label={tr("画布工具栏")}
       >
         <CanvasPopover
-          label={tr("语言 · {{name}}", {
-            name: tr(languages.find(([id]) => id === language)?.[1]),
-          })}
-          title={tr("选择语言")}
+          label={{
+            key: "语言 · {{name}}",
+            values: {
+              name: tr(languages.find(([id]) => id === language)?.[1]),
+            },
+          }}
+          title="选择语言"
           disabled={exporting}
         >
           <div className="shot-language-search">
@@ -462,8 +467,8 @@ export default function CodeImage() {
         )}
         <CanvasPopover
           alignEnd
-          label={tr("外观设置")}
-          title={tr("外观设置")}
+          label="外观设置"
+          title="外观设置"
           disabled={exporting}
         >
           <CanvasSettings

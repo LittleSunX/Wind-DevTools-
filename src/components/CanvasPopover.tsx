@@ -1,3 +1,4 @@
+import type { Message } from "../i18n";
 import { tr, useLocale } from "../i18n/react";
 import {
   useEffect,
@@ -15,8 +16,8 @@ export default function CanvasPopover({
   alignEnd = false,
   triggerRef,
 }: {
-  label: string;
-  title: string;
+  label: Message;
+  title: Message;
   children: ReactNode;
   disabled?: boolean;
   alignEnd?: boolean;

@@ -1,4 +1,5 @@
 import { tr, useLocale } from "../i18n/react";
+import { localizedPath } from "../i18n/routing";
 import { useMemo, useState } from "react";
 import { diffLines, formatUnifiedDiff } from "../utils/diff";
 import { trackTool } from "../analytics";
@@ -17,7 +18,8 @@ const rightExample = `function greet(name) {
 console.log(greet("Wind"));`;
 
 export default function DiffTool() {
-  useLocale();
+  const locale = useLocale();
+  const toolboxHref = localizedPath("/tools", locale === "en" ? "en" : "zh");
   const [left, setLeft] = useState("");
   const [right, setRight] = useState("");
   const [notice, setNotice] = useState("");
@@ -57,7 +59,7 @@ export default function DiffTool() {
   return (
     <>
       <div className="breadcrumb">
-        <a href="/tools">{tr("工具箱")}</a>
+        <a href={toolboxHref}>{tr("工具箱")}</a>
         <span>/</span>
         {tr("文本 Diff")}
       </div>
