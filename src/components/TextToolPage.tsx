@@ -6,6 +6,7 @@ import ToolIcon from "./ToolIcon";
 import { useEffect, useState } from "react";
 import type { ToolDefinition } from "../catalog";
 import { trackTool } from "../analytics";
+import { downloadFilename } from "../utils/download-filename";
 import { useToolExecution } from "./useToolExecution";
 import {
   isProcessableToolId,
@@ -131,7 +132,9 @@ export default function TextToolPage({
     );
     const a = document.createElement("a");
     a.href = url;
-    a.download = `wind-${current?.id}.${current?.id === "sql" ? "sql" : current?.id === "json" ? "json" : "txt"}`;
+    const extension =
+      current.id === "sql" ? "sql" : current.id === "json" ? "json" : "txt";
+    a.download = downloadFilename(`wind-${current.id}`, extension);
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }

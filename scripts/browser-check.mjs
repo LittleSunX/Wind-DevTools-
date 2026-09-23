@@ -166,13 +166,32 @@ try {
   );
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "下载", exact: true }).click();
-  assert.equal((await downloadPromise).suggestedFilename(), "wind-json.json");
+  assert.match(
+    (await downloadPromise).suggestedFilename(),
+    /^wind-json-\d{8}-\d{6}-\d{3}\.json$/,
+  );
+  await goto(base + "/tools/sql");
+  await page.getByRole("button", { name: "加载示例", exact: true }).click();
+  await page.getByRole("button", { name: "格式化", exact: true }).click();
+  await waitOutput("SELECT");
+  const sqlDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: "下载", exact: true }).click();
+  assert.match(
+    (await sqlDownload).suggestedFilename(),
+    /^wind-sql-\d{8}-\d{6}-\d{3}\.sql$/,
+  );
   await goto(base + "/tools/cron");
   await page.getByLabel("表达式模式", { exact: true }).selectOption("linux");
   await page.getByRole("button", { name: "加载示例", exact: true }).click();
   assert.equal(await editorValue("#tool-input"), "*/5 * * * *");
   await page.getByRole("button", { name: "计算执行时间", exact: true }).click();
   await waitOutput("Linux");
+  const textDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: "下载", exact: true }).click();
+  assert.match(
+    (await textDownload).suggestedFilename(),
+    /^wind-cron-\d{8}-\d{6}-\d{3}\.txt$/,
+  );
   await goto(base + "/tools/json");
   const code = page.locator("#tool-input");
   await code.fill('{"name":"Wind"}');

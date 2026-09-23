@@ -1,3 +1,5 @@
+import { downloadFilename } from "./download-filename";
+
 export type Segment = { text: string; type: string };
 export type ImageOptions = {
   theme: string;
@@ -410,7 +412,5 @@ export const themes: Record<
   },
 };
 export function imageFilename(date = new Date(), extension = "png") {
-  const pad = (value: number, length = 2) =>
-    String(value).padStart(length, "0");
-  return `wind-code-${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}-${pad(date.getMilliseconds(), 3)}.${extension}`;
+  return downloadFilename("wind-code", extension, date);
 }
