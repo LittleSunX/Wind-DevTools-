@@ -108,27 +108,12 @@ button.primary:hover {
   color: #3659e3;
   border-bottom: 2px solid #3659e3;
 }
-.header-local {
-  margin-left: auto;
-  font-size: 12px;
-  color: #6b6f7d;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
 i {
   display: inline-block;
   width: 6px;
   height: 6px;
   background: #64748b;
   border-radius: 100%;
-}
-.version {
-  font: 11px monospace;
-  color: #757a89;
-  border: 1px solid #dfe1e5;
-  border-radius: 5px;
-  padding: 4px 7px;
 }
 .layout {
   display: flex;
@@ -888,10 +873,6 @@ select {
     margin-left: auto;
     gap: 19px;
   }
-  .header-local,
-  .version {
-    display: none;
-  }
   main {
     padding: 28px 23px 0;
   }
@@ -1484,16 +1465,54 @@ select {
   }
 }
 
-.language-switcher {
-  flex-shrink: 0;
+.language-control {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   min-height: 36px;
-  max-width: 110px;
-  padding: 6px 10px;
-  border: 1px solid #dce2ed;
+  padding: 0 11px;
+  border: 1px solid #e2e6ed;
   border-radius: 8px;
-  background: #fff;
-  color: #34435a;
+  background: #f8f9fb;
+  color: #43506a;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+.language-control:hover,
+.language-control:focus-within {
+  background: #f1f4f9;
+  border-color: #cbd5e3;
+}
+.language-control:focus-within {
+  outline: 2px solid #5271eb;
+  outline-offset: 2px;
+}
+.language-switcher {
+  appearance: none;
+  width: auto;
+  min-width: 0;
+  min-height: 34px;
+  padding: 0 6px 0 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
   font-size: 12px;
+  cursor: pointer;
+}
+.language-switcher:focus-visible {
+  outline: 0;
+}
+.language-chevron {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  pointer-events: none;
 }
 html[lang="en"] .side-label {
   white-space: normal;
@@ -1511,22 +1530,8 @@ html[lang="en"] .hero h1 {
 html[lang="en"] .editor-header label span {
   display: none;
 }
-@media (max-width: 1100px) {
-  .topbar .header-local {
-    display: none;
-  }
-  .language-switcher {
-    margin-left: auto;
-  }
-}
 @media (max-width: 600px) {
   .topbar {
     gap: 10px;
-  }
-  .topbar .version {
-    display: none;
-  }
-  .language-switcher {
-    max-width: 94px;
   }
 }

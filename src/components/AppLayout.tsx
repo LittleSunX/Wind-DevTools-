@@ -72,11 +72,7 @@ export default function AppLayout({
           </a>
           <a href={`${href("/tools")}#about`}>{tr("关于")}</a>
         </nav>
-        <span className="header-local">
-          <i /> {tr("数据留在浏览器")}
-        </span>
         <LanguageSwitcher />
-        <span className="version">v1.0</span>
       </header>
       <div className="layout">
         <aside
