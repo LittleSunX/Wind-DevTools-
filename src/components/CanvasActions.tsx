@@ -1,6 +1,6 @@
 import type { Message } from "../i18n";
 import { tr, useLocale } from "../i18n/react";
-import type { RefObject } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import CanvasPopover from "./CanvasPopover";
 import {
   blobToDataUrl,
@@ -8,6 +8,7 @@ import {
   exportCanvas,
   exportCanvasSvg,
   exportCanvasSvgSource,
+  loadExportImage,
 } from "../utils/canvas-export";
 import { imageFilename, type ImageOptions } from "../utils/code-image";
 import { trackTool } from "../analytics";
@@ -34,7 +35,28 @@ export default function CanvasActions({
   setNotice,
   update,
 }: Props) {
-  useLocale();
+  const locale = useLocale();
+  const pngCache = useRef<{ key: string; blob: Blob } | null>(null);
+
+  const activePreview = useRef<AbortController | null>(null);
+  useEffect(() => () => activePreview.current?.abort(), []);
+
+  function renderPng(signal?: AbortSignal) {
+    signal?.throwIfAborted();
+    const node = artwork.current;
+    if (!node) throw new Error("画布尚未准备好，请重试。");
+    // The artwork markup includes code, syntax colors, title and visual options.
+    // Dimensions and scale also affect the PNG but are not fully reflected in HTML.
+    const key = `${node.offsetWidth}:${node.offsetHeight}:${options.scale}:${options.fontFamily}:${node.outerHTML}`;
+    if (pngCache.current?.key === key)
+      return Promise.resolve(pngCache.current.blob);
+    return exportCanvas(node, options, signal).then((blob) => {
+      signal?.throwIfAborted();
+      pngCache.current = { key, blob };
+      return blob;
+    });
+  }
+
   function hideActionMenu(target: HTMLElement) {
     target.closest<HTMLElement>("[popover]")?.hidePopover();
   }
@@ -46,7 +68,7 @@ export default function CanvasActions({
     try {
       if (!navigator.clipboard?.write || typeof ClipboardItem === "undefined")
         throw new Error("当前浏览器不支持复制图片，请下载 PNG。");
-      const blob = exportCanvas(artwork.current, options);
+      const blob = renderPng();
       await navigator.clipboard.write([
         new ClipboardItem({ "image/png": blob }),
       ]);
@@ -85,7 +107,7 @@ export default function CanvasActions({
     setNotice("");
     const action = mode === "data-url" ? "copy_data_url" : "copy_base64";
     try {
-      const blob = await exportCanvas(artwork.current, options);
+      const blob = await renderPng();
       const dataUrl = await blobToDataUrl(blob);
       await navigator.clipboard.writeText(
         mode === "data-url" ? dataUrl : dataUrlToBase64(dataUrl),
@@ -106,29 +128,102 @@ export default function CanvasActions({
 
   async function openPngPreview() {
     if (!canExport || !artwork.current || exporting) return;
-    const preview = window.open("", "_blank");
+    const preview = window.open("", "_blank") as
+      (Window & typeof globalThis) | null;
     if (!preview) {
       setNotice("新标签页被浏览器拦截，请允许弹出窗口后重试。");
       trackTool("code-image", "open_image", "error");
       return;
     }
     preview.opener = null;
+    const document = preview.document;
+    const previewURL = preview.URL;
+    const controller = new AbortController();
+    activePreview.current = controller;
+    let previewLeft = false;
+    const isCurrent = () => {
+      try {
+        return !previewLeft && !preview.closed && preview.document === document;
+      } catch {
+        return false;
+      }
+    };
+    const cancel = () => controller.abort();
+    const leavePreview = () => {
+      previewLeft = true;
+      cancel();
+    };
+    preview.addEventListener("pagehide", leavePreview, { once: true });
+    const leaveEditor = () => {
+      cancel();
+      if (isCurrent()) preview.close();
+    };
+    window.addEventListener("pagehide", leaveEditor, { once: true });
+    // Some browsers do not dispatch pagehide when a tab is closed.
+    const closedCheck = setInterval(() => {
+      if (!isCurrent()) leavePreview();
+    }, 250);
+    let imageTimer: ReturnType<typeof setTimeout> | undefined;
+    let release: (() => void) | undefined;
     setExporting(true);
     setNotice("");
     try {
-      const blob = await exportCanvas(artwork.current, options);
-      const url = URL.createObjectURL(blob);
-      preview.location.href = url;
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      document.title = tr("PNG 预览");
+      document.documentElement.lang = locale.startsWith("en") ? "en" : "zh";
+      document.body.style.cssText =
+        "min-height:100vh;margin:0;display:grid;place-items:center;background:#f6f8fc;color:#36445c;font:16px system-ui,sans-serif";
+      const loading = document.createElement("p");
+      loading.setAttribute("role", "status");
+      loading.textContent = tr("正在生成 PNG 预览…");
+      document.body.replaceChildren(loading);
+
+      const blob = await renderPng(controller.signal);
+      if (!isCurrent()) return;
+      // The preview owns the URL, so it stays usable if the editor is reloaded.
+      const url = previewURL.createObjectURL(blob);
+      release = () => previewURL.revokeObjectURL(url);
+      preview.addEventListener("pagehide", release, { once: true });
+      const image = document.createElement("img");
+      image.alt = tr("PNG 预览");
+      image.style.cssText = "display:block;max-width:100%;height:auto";
+      imageTimer = setTimeout(
+        () => controller.abort(new Error("无法打开图片，请重试。")),
+        10000,
+      );
+      await loadExportImage(image, url, controller.signal);
+      if (!isCurrent()) return;
+      document.body.style.cssText =
+        "min-height:100vh;margin:0;padding:24px;box-sizing:border-box;display:grid;place-items:center;background:#f6f8fc";
+      document.body.replaceChildren(image);
       setNotice("已在新标签页打开 PNG。");
       trackTool("code-image", "open_image", "success");
     } catch (error) {
-      preview.close();
+      if (release) {
+        if (isCurrent()) preview.removeEventListener("pagehide", release);
+        release();
+      }
+      // Closing/navigating the tab is cancellation, not an export failure.
+      if (!isCurrent()) return;
+      if (error instanceof DOMException && error.name === "AbortError") {
+        preview.close();
+        return;
+      }
+      // Do not repeatedly serve a PNG that the browser could not display.
+      pngCache.current = null;
+      const message =
+        error instanceof Error ? error.message : "无法打开图片，请重试。";
+      const alert = document.createElement("p");
+      alert.setAttribute("role", "alert");
+      alert.textContent = tr(message);
+      document.body.replaceChildren(alert);
       trackTool("code-image", "open_image", "error");
-      setNotice(
-        error instanceof Error ? error.message : "无法打开图片，请重试。",
-      );
+      setNotice(message);
     } finally {
+      clearTimeout(imageTimer);
+      clearInterval(closedCheck);
+      if (isCurrent()) preview.removeEventListener("pagehide", leavePreview);
+      window.removeEventListener("pagehide", leaveEditor);
+      if (activePreview.current === controller) activePreview.current = null;
       setExporting(false);
     }
   }
@@ -138,7 +233,7 @@ export default function CanvasActions({
     setExporting(true);
     setNotice("");
     try {
-      const blob = await exportCanvas(artwork.current, options);
+      const blob = await renderPng();
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;

@@ -689,3 +689,57 @@
   outline-offset: -2px;
   border-radius: 6px;
 }
+
+/* Put the editable canvas into view sooner while keeping its controls together. */
+.canvas-heading {
+  margin-bottom: 15px;
+}
+.canvas-toolbar {
+  padding: 10px 12px;
+  gap: 9px;
+}
+.canvas-utility {
+  padding: 8px 2px;
+  color: #5c6b80;
+  font-size: 12px;
+}
+.canvas-utility button {
+  min-height: 34px;
+  border-radius: 6px;
+  color: #52617b;
+}
+.canvas-utility button:hover:not(:disabled) {
+  background: #f0f3fa;
+}
+.canvas-stage {
+  padding: 24px;
+}
+@media (max-width: 520px) {
+  .canvas-stage {
+    padding: 18px 12px;
+  }
+}
+
+.popover-label-compact {
+  display: none;
+}
+@media (max-width: 520px) {
+  .canvas-toolbar .popover-label-full,
+  .canvas-toolbar > .shot-field .shot-field-label {
+    display: none;
+  }
+  .canvas-toolbar .popover-label-compact {
+    display: inline;
+  }
+  .canvas-toolbar > .shot-field select {
+    max-width: 94px;
+  }
+  .canvas-utility > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    white-space: nowrap;
+    clip-path: inset(50%);
+  }
+}

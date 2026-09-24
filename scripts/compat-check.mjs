@@ -1,7 +1,12 @@
 import { chromium, firefox, webkit, expect } from "@playwright/test";
 import assert from "node:assert/strict";
+import { checkPreviewRecovery } from "./canvas-preview-checks.mjs";
 import { mkdir } from "node:fs/promises";
-import { canvasTools, comparePixels } from "./canvas-test-utils.mjs";
+import {
+  canvasTools,
+  captureArtwork,
+  comparePixels,
+} from "./canvas-test-utils.mjs";
 await mkdir("artifacts", { recursive: true });
 const base = process.env.TEST_URL || "http://localhost:4173";
 for (const [name, engine] of [
@@ -41,15 +46,30 @@ for (const [name, engine] of [
       .locator(".canvas-frame")
       .evaluate((e) => (e.style.marginLeft = "0"));
     await editor.evaluate((e) => e.blur());
-    const shot = await artwork.screenshot({
-      path: `artifacts/${name}-artwork.png`,
-    });
+    const shot = await captureArtwork(
+      page,
+      artwork,
+      `artifacts/${name}-artwork.png`,
+    );
     const exported = await png(`artifacts/${name}-export.png`);
     const match = await comparePixels(page, shot, exported.bytes);
     assert.ok(
       match.sameSize && match.ratio < 0.05,
       `${name}: ${JSON.stringify(match)}`,
     );
+    const copyPanel = await openPopover(
+      page.getByRole("button", { name: "复制", exact: true }),
+    );
+    const popupEvent = page.waitForEvent("popup");
+    await copyPanel.getByRole("button", { name: "在新标签页打开" }).click();
+    const preview = await popupEvent;
+    await expect(preview.locator("img")).toBeVisible();
+    assert.equal(
+      await preview.locator("img").evaluate((image) => image.naturalWidth),
+      await artwork.evaluate((element) => element.offsetWidth),
+    );
+    await preview.close();
+    await ready();
     await editor.focus();
     await editor.press("ControlOrMeta+End");
     await editor.pressSequentially("nativeInput");
@@ -85,7 +105,7 @@ for (const [name, engine] of [
       'const mixed = "' + "中文 emoji 👨‍👩‍👧‍👦 identifier ".repeat(8) + '";',
     );
     await ready();
-    const wrapped = await artwork.screenshot();
+    const wrapped = await captureArtwork(page, artwork);
     const wrappedExport = await png(`artifacts/${name}-wrapped.png`);
     const wrappedMatch = await comparePixels(
       page,
@@ -153,8 +173,9 @@ for (const [name, engine] of [
       .waitFor();
     await ready();
     assert.deepEqual(errors, []);
+    await checkPreviewRecovery(browser, base);
     console.log(
-      `${name}: visual/export parity, native input/undo, composition events, delayed highlighting, preferences and mobile passed.`,
+      `${name}: visual/export/preview parity, native input/undo, composition events, delayed highlighting, preferences and mobile passed.`,
     );
   } catch (error) {
     await page

@@ -3,6 +3,7 @@ import { localizedPath } from "../i18n/routing";
 import { useMemo, useState } from "react";
 import { diffLines, formatUnifiedDiff } from "../utils/diff";
 import { trackTool } from "../analytics";
+import ToolIcon from "./ToolIcon";
 
 const leftExample = `function greet(name) {
   return "Hello " + name;
@@ -68,34 +69,13 @@ export default function DiffTool() {
           <div className="eyebrow">{tr("文本处理 / DIFF")}</div>
           <h1>{tr("文本 Diff")}</h1>
           <p>{tr("并排比较两段文本，快速定位新增、删除和未变化的行。")}</p>
+          <div className="privacy-banner">
+            <span aria-hidden="true">✓</span>
+            {tr("比较只在当前浏览器完成，不上传文本内容。")}
+          </div>
         </div>
-        <span className="tool-icon" aria-hidden="true">
-          ±
-        </span>
+        <ToolIcon id="diff" />
       </section>
-      <div className="privacy-banner">
-        <span>⌑</span> {tr("比较只在当前浏览器完成，不上传文本内容。")}
-        <span className="local-badge">LOCAL ONLY</span>
-      </div>
-
-      <div className="diff-actions">
-        <button onClick={loadExample}>{tr("加载示例")}</button>
-        <button
-          onClick={() => {
-            setLeft("");
-            setRight("");
-            setNotice("");
-          }}
-        >
-          {tr("清空")}
-        </button>
-        <span>
-          {tr("新增 {{added}} 行 · 删除 {{removed}} 行", { added, removed })}
-        </span>
-        <button disabled={!lines.length} onClick={copyDiff}>
-          {tr("复制统一 Diff")}
-        </button>
-      </div>
 
       <div className="diff-inputs">
         <section className="editor-panel">
@@ -103,6 +83,16 @@ export default function DiffTool() {
             <label htmlFor="diff-left">
               {tr("原始文本")} <span>BEFORE</span>
             </label>
+            <button onClick={loadExample}>{tr("加载示例")}</button>
+            <button
+              onClick={() => {
+                setLeft("");
+                setRight("");
+                setNotice("");
+              }}
+            >
+              {tr("清空")}
+            </button>
           </div>
           <textarea
             id="diff-left"
@@ -153,7 +143,17 @@ export default function DiffTool() {
       <section className="diff-result" aria-label={tr("Diff 结果")}>
         <div className="diff-result-header">
           <strong>{tr("差异结果")}</strong>
-          <span>{tr("绿色新增 · 红色删除")}</span>
+          <span>
+            {lines.length
+              ? tr("新增 {{added}} 行 · 删除 {{removed}} 行", {
+                  added,
+                  removed,
+                })
+              : tr("绿色新增 · 红色删除")}
+          </span>
+          <button disabled={!lines.length} onClick={copyDiff}>
+            {tr("复制统一 Diff")}
+          </button>
         </div>
         {!lines.length && !error ? (
           <div className="diff-empty">

@@ -84,6 +84,20 @@ export function canvasTools(page) {
     dimensions,
   };
 }
+export async function captureArtwork(page, artwork, path) {
+  const bounds = await artwork.boundingBox();
+  if (!bounds) throw new Error("Canvas artwork has no bounding box");
+  const dimensions = await artwork.evaluate((element) => ({
+    width: element.offsetWidth,
+    height: element.offsetHeight,
+  }));
+  // Element screenshots may gain a pixel when their page position is fractional.
+  return page.screenshot({
+    ...(path ? { path } : {}),
+    clip: { x: bounds.x, y: bounds.y, ...dimensions },
+  });
+}
+
 export async function comparePixels(page, first, second) {
   return page.evaluate(
     async ({ first, second }) => {

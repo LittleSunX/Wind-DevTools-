@@ -2,6 +2,7 @@ import { tr, useLocale } from "../i18n/react";
 import { localizedPath } from "../i18n/routing";
 import { useEffect, useRef, useState } from "react";
 import { tools } from "../catalog";
+import ToolIcon from "./ToolIcon";
 
 const preferenceKey = "wind.sidebar.collapsed";
 
@@ -172,9 +173,7 @@ export default function Sidebar({
           aria-current={isHome ? "page" : undefined}
           title={tr(collapsed ? "全部工具" : undefined)}
         >
-          <span className="side-icon" aria-hidden="true">
-            ▦
-          </span>
+          <ToolIcon id="all" compact />
           <span className="side-label">{tr("全部工具")}</span>
           <small>{String(tools.length).padStart(2, "0")}</small>
         </a>
@@ -188,9 +187,7 @@ export default function Sidebar({
             aria-current={currentId === t.id ? "page" : undefined}
             title={tr(collapsed ? t.name : undefined)}
           >
-            <span className="side-icon" aria-hidden="true">
-              {t.icon}
-            </span>
+            <ToolIcon id={t.id} compact />
             <span className="side-label">{tr(t.name)}</span>
             {currentId === t.id && <span className="active-dot" />}
           </a>

@@ -1,7 +1,13 @@
 import { chromium, expect } from "@playwright/test";
 import assert from "node:assert/strict";
+import { checkPreviewRecovery } from "./canvas-preview-checks.mjs";
 import { mkdir } from "node:fs/promises";
-import { canvasTools, comparePixels, pixelAt } from "./canvas-test-utils.mjs";
+import {
+  canvasTools,
+  captureArtwork,
+  comparePixels,
+  pixelAt,
+} from "./canvas-test-utils.mjs";
 const browser = await chromium.launch({
   channel: process.env.PW_CHANNEL === "bundled" ? undefined : "chrome",
 });
@@ -36,6 +42,81 @@ await mkdir("artifacts", { recursive: true });
 try {
   await page.goto(base + "/tools/code-image");
   await ready();
+  // Preview must show progress immediately and reuse the same PNG until the artwork changes.
+  const initialCode = await editor.inputValue();
+  await page.evaluate(() => {
+    // Opening a new tab may suspend animation frames in the source tab.
+    // The first preview must not depend on another frame being delivered.
+    window.__originalRaf = window.requestAnimationFrame;
+    window.requestAnimationFrame = () => 0;
+    window.__originalToBlob = HTMLCanvasElement.prototype.toBlob;
+    window.__pngEncodes = 0;
+    HTMLCanvasElement.prototype.toBlob = function (callback, ...args) {
+      window.__pngEncodes++;
+      setTimeout(
+        () => window.__originalToBlob.call(this, callback, ...args),
+        800,
+      );
+    };
+  });
+  async function openPngPreview(expectLoading = false) {
+    const panel = await openPopover(
+      page.getByRole("button", { name: "复制", exact: true }),
+    );
+    const popupEvent = page.waitForEvent("popup");
+    await panel.getByRole("button", { name: "在新标签页打开" }).click();
+    const popup = await popupEvent;
+    if (expectLoading)
+      await expect(popup.getByRole("status")).toHaveText("正在生成 PNG 预览…");
+    await expect(popup.locator("img")).toBeVisible({ timeout: 15000 });
+    await popup.close();
+    await ready();
+  }
+  await openPngPreview(true);
+  await page.evaluate(() => {
+    window.requestAnimationFrame = window.__originalRaf;
+  });
+  assert.equal(await page.evaluate(() => window.__pngEncodes), 1);
+  await openPngPreview();
+  assert.equal(await page.evaluate(() => window.__pngEncodes), 1);
+  await editor.fill("const previewChanged = true;");
+  await ready();
+  await openPngPreview();
+  assert.equal(await page.evaluate(() => window.__pngEncodes), 2);
+  // A browser that never calls toBlob must still produce a first PNG preview.
+  await editor.fill("const stalledBlob = true;");
+  await ready();
+  await page.evaluate(() => {
+    HTMLCanvasElement.prototype.toBlob = function () {
+      window.__pngEncodes++;
+    };
+  });
+  await openPngPreview(true);
+  assert.equal(await page.evaluate(() => window.__pngEncodes), 3);
+  // A broken image must replace the loading state with an actionable error.
+  await editor.fill("const brokenPreview = true;");
+  await ready();
+  await page.evaluate(() => {
+    HTMLCanvasElement.prototype.toBlob = function (callback) {
+      callback(new Blob(["invalid png"], { type: "image/png" }));
+    };
+  });
+  const copyPanel = await openPopover(
+    page.getByRole("button", { name: "复制", exact: true }),
+  );
+  const failedPopupEvent = page.waitForEvent("popup");
+  await copyPanel.getByRole("button", { name: "在新标签页打开" }).click();
+  const failedPopup = await failedPopupEvent;
+  await expect(failedPopup.getByRole("alert")).toHaveText(
+    "无法绘制图片，请重试。",
+  );
+  await failedPopup.close();
+  await ready();
+  await editor.fill(initialCode);
+  await ready();
+  await page.evaluate(() => {
+    HTMLCanvasElement.prototype.toBlob = window.__originalToBlob;
+  });
   assert.equal(
     await page.locator(".shot-layout, .shot-preview-stage").count(),
     0,
@@ -60,9 +141,11 @@ try {
   await page
     .locator(".canvas-frame")
     .evaluate((el) => (el.style.marginLeft = "0"));
-  const screenshot = await artwork.screenshot({
-    path: "artifacts/canvas-artwork.png",
-  });
+  const screenshot = await captureArtwork(
+    page,
+    artwork,
+    "artifacts/canvas-artwork.png",
+  );
   const first = await png("artifacts/canvas-artwork-export.png");
   assert.match(first.name, /^wind-code-\d{8}-\d{6}-\d{3}\.png$/);
   const match = await comparePixels(page, screenshot, first.bytes);
@@ -304,6 +387,7 @@ try {
   ).toBeEnabled();
   await failed.close();
   assert.deepEqual(errors, []);
+  await checkPreviewRecovery(browser, base);
   console.log(
     "Canvas checks passed: DOM/PNG parity, zoom, scale, input/undo/find, selection exclusion, clipboard, wrapping, long export, privacy and mobile.",
   );

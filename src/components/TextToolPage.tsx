@@ -184,13 +184,13 @@ export default function TextToolPage({
           </div>
           <h1>{tr(current.name)}</h1>
           <p>{tr(current.description)}</p>
+          <div className="privacy-banner">
+            <span aria-hidden="true">✓</span>
+            {tr("数据仅在当前浏览器处理，刷新后不会自动恢复。")}
+          </div>
         </div>
-        <ToolIcon>{current.icon}</ToolIcon>
+        <ToolIcon id={current.id} />
       </section>
-      <div className="privacy-banner">
-        <span>⌑</span> {tr("数据仅在当前浏览器处理，刷新后不会自动恢复。")}
-        <span className="local-badge">LOCAL ONLY</span>
-      </div>
       {current.id === "timestamp" && (
         <div className="live-time">
           <span>

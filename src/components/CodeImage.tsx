@@ -260,7 +260,7 @@ export default function CodeImage() {
     change: (v: string) => void,
   ) => (
     <label className="shot-field">
-      {tr(label)}
+      <span className="shot-field-label">{tr(label)}</span>
       <select
         aria-label={tr(label)}
         value={value}
@@ -306,6 +306,7 @@ export default function CodeImage() {
             },
           }}
           title="选择语言"
+          compactLabel={languages.find(([id]) => id === language)?.[1]}
           disabled={exporting}
         >
           <div className="shot-language-search">

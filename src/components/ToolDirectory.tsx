@@ -120,7 +120,7 @@ export default function ToolDirectory({ language }: { language: Language }) {
               key={t.id}
             >
               <div className="card-top">
-                <ToolIcon>{t.icon}</ToolIcon>
+                <ToolIcon id={t.id} />
                 <span className="card-category">{tr(t.category)}</span>
               </div>
               <h3>{tr(t.name)}</h3>

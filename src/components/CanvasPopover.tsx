@@ -10,6 +10,7 @@ import {
 
 export default function CanvasPopover({
   label,
+  compactLabel,
   title,
   children,
   disabled = false,
@@ -17,6 +18,7 @@ export default function CanvasPopover({
   triggerRef,
 }: {
   label: Message;
+  compactLabel?: Message;
   title: Message;
   children: ReactNode;
   disabled?: boolean;
@@ -46,8 +48,17 @@ export default function CanvasPopover({
         popoverTarget={id}
         disabled={disabled}
         aria-haspopup="dialog"
+        aria-label={tr(label)}
       >
-        {tr(label)} <span aria-hidden="true">⌄</span>
+        <span className={compactLabel ? "popover-label-full" : undefined}>
+          {tr(label)}
+        </span>
+        {compactLabel && (
+          <span className="popover-label-compact" aria-hidden="true">
+            {tr(compactLabel)}
+          </span>
+        )}{" "}
+        <span aria-hidden="true">⌄</span>
       </button>
       <div
         ref={panel}
